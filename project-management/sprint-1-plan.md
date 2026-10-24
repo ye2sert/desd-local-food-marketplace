@@ -2,7 +2,7 @@
 
 **Sprint dates:** 12 October 2026 – 29 October 2026
 **Review submission:** Thursday 29 October 2026, 14:00 (ZIP on Blackboard)
-**Review format:** [In-class / Video – delete one]
+**Review format:** [Video]
 
 ## Sprint goal
 Model the marketplace at a strategic level, agree the scope of our two major functionalities, and set up the backlog, board and repository for the project.
@@ -43,13 +43,13 @@ Status: To Do / In Progress / Review / Done. The project board is the live versi
 |---|---|
 | Thu 22 Oct | Group call: agree review format, processes and pools |
 | Fri 23 – Sat 24 Oct | Individual tasks (T3–T10) |
-| Sun 25 Oct | Review call: finalise strategic BPMN, commit work |
+| Mon 26 Oct | Review meeting: finalise strategic BPMN, commit work |
 | Mon 26 – Wed 28 Oct | Tell tutor format (if in-class), rehearse or record, check links |
 | Thu 29 Oct | Submit ZIP before 14:00 |
 
 ## Definition of done
 - Work is committed to the repository by the person who did it.
-- Another member has reviewed it (pull request or group call).
+- Another member has reviewed it (pull request or group call/meeting).
 - The task is moved to Done on the board.
 
 ## Risks
