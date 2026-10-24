@@ -3,7 +3,7 @@
 UFCFTR-30-3 Distributed and Enterprise Software Development – Task 1
 Bristol Regional Food Network – Digital Marketplace
 
-**Project board:** [paste board link]
+**Project board:** [https://github.com/users/rsami040405/projects/1]
 **Current sprint:** Sprint 1 – Strategic Process Analysis and Project Setup (12 Oct – 29 Oct 2026)
 
 ## Use case
