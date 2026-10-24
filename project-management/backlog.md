@@ -14,7 +14,7 @@ Functionality leads stay accountable for their functionality, but the work insid
 
 | Member | Role | Sprint 1 tasks | Backlog items | Points | Share |
 |---|---|---|---|---|---|
-| Hamza | Strategic BPMN | T5, T6 (8) | PW2, US8, PW7 (13) | 21 | 20% |
+| Hamza | Strategic BPMN & integration| T5, T6 (8) | PW2, US8, PW7 (13) | 21 | 20% |
 | Tahmid | Business analysis | T3, T4 (6) | PW1, US2, US12 (15) | 21 | 20% |
 | Yunus | Lead – Checkout & Stock Validation | T7 (3) | PW3, US1, US3, US4, US5, US11 (18) | 21 | 20% |
 | Mackenzie | Lead – Payment & Order Processing | T8, T9 (4) | PW4, US7, US9, US10, PW9 (17) | 21 | 20% |
