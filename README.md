@@ -1,25 +1,45 @@
 # desd-local-food-marketplace
 
+UFCFTR-30-3 Distributed and Enterprise Software Development – Task 1
+Bristol Regional Food Network – Digital Marketplace
+
+**Project board:** [paste board link]
+**Current sprint:** Sprint 1 – Strategic Process Analysis and Project Setup (12 Oct – 29 Oct 2026)
+
 ## Use case
-Use Case 2: Customer Multi-Vendor Order, Checkout and Payment. A customer
-buys products from one or more local producers in a single order. The
-system checks stock, processes payment through a simulated payment
-service, updates inventory, notifies producers and calculates the
-marketplace's 5% commission.
+
+**Use Case 2: Customer Multi-Vendor Order, Checkout and Payment.**
+A customer buys products from one or more local producers in a single order. The system checks stock, processes payment through a simulated payment service, updates inventory, notifies producers and calculates the marketplace's 5% commission.
 
 ## Proposed functionalities
-1. Checkout & Stock Validation
-2. Payment & Order Processing
-(note: awaiting module team approval)
+
+1. **Checkout & Stock Validation** – covers the multi-vendor basket, stock checks at checkout, amending orders when stock is insufficient, grouping by producer with delivery or collection arrangements, and order confirmation.
+2. **Payment & Order Processing** – covers payment through a simulated external service, declined payments with retry, payment service unavailability, splitting the order by producer, inventory updates, producer notification and the 5% commission. *(Awaiting module team approval.)*
 
 ## Team
-- Hamza – Strategic BPMN
-- Tahmid – Business analysis
-- Yunus – Checkout & Stock Validation
-- Mackenzie – Payment & Order Processing
-- Rohan – Backlog / project board
+
+| Member | Role |
+|---|---|
+| Hamza | Strategic BPMN |
+| Tahmid | Business analysis |
+| Yunus | Checkout & Stock Validation |
+| Mackenzie | Payment & Order Processing |
+| Rohan | Backlog / project board |
 
 ## Repository structure
-- bpmn/ – BPMN models
-- docs/ – analysis and sprint documents
-- project-management/ – backlog and planning
+
+| Folder | Contents |
+|---|---|
+| `bpmn/` | Strategic and operational BPMN models |
+| `istar/` | i* Strategic Dependency and Strategic Rationale models (Sprint 2) |
+| `camunda/` | Executable processes, Forms and service tasks (Sprint 2 onwards) |
+| `docs/` | Analysis and sprint documents |
+| `docs/meetings/` | Meeting notes |
+| `project-management/` | Backlog and sprint plans |
+
+## Key documents
+
+- [Product backlog](project-management/backlog.md)
+- [Sprint 1 plan](project-management/sprint-1-plan.md)
+
+*AI was used in an assistive role throughout this document. It was reviewed by our team and changes were made.*
