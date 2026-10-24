@@ -19,23 +19,23 @@ Model the marketplace at a strategic level, agree the scope of our two major fun
 
 ## Sprint 1 tasks
 
-| # | Task | Owner | Points | Status |
-|---|---|---|---|---|
-| T1 | Set up GitHub repository structure and README | Rohan | 1 | |
-| T2 | Set up project board and make it accessible to markers | Rohan | 1 | |
-| T3 | Identify stakeholders, their needs and external services | Tahmid | 3 | |
-| T4 | Identify major business processes and responsibilities | Tahmid | 3 | |
-| T5 | Draft strategic BPMN (pools, lanes, major processes) | Hamza | 5 | |
-| T6 | Add message flows with external services to strategic BPMN | Hamza | 3 | |
-| T7 | Scope Checkout & Stock Validation, including exception paths | Yunus | 3 | |
-| T8 | Scope Payment & Order Processing, including exception paths | Mackenzie | 3 | |
-| T9 | Get both functionalities agreed with the module team | Mackenzie | 1 | |
-| T10 | Write product backlog with priorities and story points | Rohan | 3 | |
-| T11 | Group review of strategic BPMN and fixes | All | 3 | |
-| T12 | Plan and rehearse / record Sprint 1 review | All | 3 | |
-| T13 | Prepare and submit ZIP (links, screenshots, video if used) | Rohan | 1 | |
+| # | Task | Owner | Points |
+|---|---|---|---|
+| T1 | Set up GitHub repository structure and README | Rohan | 1 |
+| T2 | Set up project board and make it accessible to markers | Rohan | 1 |
+| T3 | Identify stakeholders, their needs and external services | Tahmid | 3 |
+| T4 | Identify major business processes and responsibilities | Tahmid | 3 |
+| T5 | Draft strategic BPMN (pools, lanes, major processes) | Hamza | 5 |
+| T6 | Add message flows with external services to strategic BPMN | Hamza | 3 |
+| T7 | Scope Checkout & Stock Validation, including exception paths | Yunus | 3 |
+| T8 | Scope Payment & Order Processing, including exception paths | Mackenzie | 3 |
+| T9 | Get both functionalities agreed with the module team | Mackenzie | 1 |
+| T10 | Write product backlog with priorities and story points | Rohan | 3 |
+| T11 | Group review of strategic BPMN and fixes | All | 3 |
+| T12 | Plan and rehearse / record Sprint 1 review | All | 3 |
+| T13 | Prepare and submit ZIP (links, screenshots, video if used) | Rohan | 1 |
 
-Status: To Do / In Progress / Review / Done. The project board is the live version of this table.
+Task status is tracked live on the [project board](https://github.com/users/rsami040405/projects/1) (To Do / In Progress / Review / Done).
 
 ## Timeline
 
