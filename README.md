@@ -20,7 +20,7 @@ A customer buys products from one or more local producers in a single order. The
 
 | Member | Role |
 |---|---|
-| Hamza | Strategic BPMN |
+| Hamza | Strategic BPMN & integration|
 | Tahmid | Business analysis |
 | Yunus | Checkout & Stock Validation |
 | Mackenzie | Payment & Order Processing |
