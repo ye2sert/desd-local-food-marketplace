@@ -202,10 +202,17 @@ Acceptance criteria:
 - Producer amounts plus commission equal the order total.
 
 ### US12 – Weekly producer settlement with audit trail
+
 **As a** producer, **I want** to receive a weekly payment with a clear record of each order, **so that** I can use it for tax and accounting.
+
 **Priority:** Could | **Points:** 5 | **Owner:** Tahmid
+
 **Source:** Case study (Producers) – weekly payment settlements with transparent audit trails for tax reporting; Case study (Core Functionality) – distribute payments to producers according to agreed timeframes.
 
+**Acceptance criteria:**
+- Each producer's amounts are totalled weekly, minus commission.
+- A settlement record lists each order, item, amount and commission.
+- Settlement records can be viewed by the producer and the marketplace.
 Acceptance criteria:
 - Each producer's amounts are totalled weekly, minus commission.
 - A settlement record lists each order, item, amount and commission.
