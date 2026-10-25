@@ -91,14 +91,14 @@ Acceptance criteria:
 ## Functionality 2 – Payment & Order Processing (lead: Mackenzie)
 
 ### US6 – Pay through the payment service
-**As a** customer, **I want** to pay securely through the payment service, **so that** my order is confirmed.
+As a customer I want to be able to securely pay for my whole basket in a single payment even if there are items from different sellers. This is so my order will go through seamlessly without extra hassle of paying multiple times.
 **Priority:** Must | **Points:** 5 | **Owner:** Rohan
 **Source:** Use Case 2 – payment submitted to an external or simulated payment service, and the order is separated into producer-specific elements; Case study (Disclaimers) – sandbox or simulated payments only.
 
 Acceptance criteria:
-- Payment is sent to a simulated / sandbox payment service (no live payments).
-- A successful payment confirms the order and shows a confirmation to the customer.
-- The marketplace order is split into producer-specific order elements.
+- Payments need to be sent to a simulated payment sandbox environment for example PayPal sandbox. No real money will be used in the functionality testing of the system.
+- The order is confirmed and after a successful payment the customer will get a payment confirmation screen with the order number and details present.
+- After a payment is made from the customer, which has bought items from multiple stores but made one payment, the store owners will only see their own items that have been purchased.
 
 ### US7 – Payment declined (exception)
 **As a** customer, **I want** to be told if my payment is declined and be able to retry, **so that** I don't lose my order.
@@ -179,12 +179,12 @@ Detailed end-to-end model with message flows to the payment service, boundary ev
 **Source:** Use Case 2 – payment, exceptions, order confirmation, inventory update, notification, commission.
 
 ### PW5 – Camunda setup and simulated payment service
-Set up Camunda, deploy the processes, and build a simulated payment service that can return success, decline or timeout.
+Set up Camunda on a local machine and add the checkout and payment processes so they can execute in camunda. Also create a fake payment service such as a PayPal sandbox link so testing can be completed easier. 
 **Sprint:** 2 | **Owner:** Rohan | **Priority:** Must | **Points:** 5
 **Source:** Use Case 2 and Case study (Disclaimers) – sandbox or simulated payment service only.
 
 ### PW6 – Camunda Forms for checkout and payment
-Build the user task forms: basket review, amend order, confirm order, payment details, retry payment.
+Make the Camunda forms so they can be used by customers for each stage in the process of checkout and payments which are reviewing the basket, editing the order, confirming the order payment details and retry payment feature. Each form must send the customers input, for example updated quantities or retry choice, back to the process. Each form will be built with Yunus and Mackenzie so the forms match their BPMN diagrams.
 **Sprint:** 2–3 | **Owner:** Rohan | **Priority:** Must | **Points:** 5
 **Source:** Use Case 2 – customer interactions at each stage.
 
