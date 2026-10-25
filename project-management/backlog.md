@@ -38,9 +38,68 @@ Acceptance criteria:
 - The basket total updates when items are added, removed or changed.
 
 ### US2 – Stock check at checkout
-**As a** customer, **I want** the system to check stock when I check out, **so that** I don't order something that has sold out.
-**Priority:** Must | **Points:** 5 | **Owner:** Tahmid
-**Source:** Use Case 2 – system checks all products are still available in the requested quantities; Case study (Core Functionality) – inventory management and seasonal availability.
+**Owner:** Tahmid  
+**Priority:** Must  
+**Story Points:** 5  
+**Functionality:** Checkout & Stock Validation
+
+## User Story
+
+As a customer, I want the system to check stock when I check out, so that I don't order something that has sold out.
+
+## Description
+
+When a customer proceeds to checkout, the marketplace must check whether every product in their basket is available in the requested quantity.
+
+The system compares the requested quantities against the current stock information.
+
+If all products are available, the customer can continue checkout.
+
+If any product is unavailable or there is insufficient stock, checkout cannot continue until the basket is corrected.
+
+## Acceptance Criteria
+
+1. Every basket item is checked against current stock when checkout starts.
+2. Checkout only continues if all items are available in the requested quantities.
+3. Products that are out of season or at zero stock count as unavailable.
+
+## Example Scenario
+
+**Scenario 1: Sufficient stock**
+
+Given a customer has added 3 apples to their basket,
+
+And the producer has 10 apples available,
+
+When the customer proceeds to checkout,
+
+Then the system validates the available stock,
+
+And the customer can continue checkout.
+
+**Scenario 2: Insufficient stock**
+
+Given a customer has added 5 apples to their basket,
+
+And the producer only has 2 apples available,
+
+When the customer proceeds to checkout,
+
+Then the system detects insufficient stock,
+
+And checkout cannot continue with the requested quantity.
+
+**Scenario 3: Product unavailable**
+
+Given a customer has added a seasonal product to their basket,
+
+And the product is currently out of season,
+
+When the customer proceeds to checkout,
+
+Then the system identifies the product as unavailable,
+
+And checkout cannot continue with that product.
 
 Acceptance criteria:
 - Every basket item is checked against current stock when checkout starts.
