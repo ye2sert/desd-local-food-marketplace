@@ -2,7 +2,7 @@
 
 **Sprint dates:** 12 October 2026 – 29 October 2026
 **Review submission:** Thursday 29 October 2026, 14:00 (ZIP on Blackboard)
-**Review format:** [Video]
+**Review format:** Video
 
 ## Sprint goal
 Model the marketplace at a strategic level, agree the scope of our two major functionalities, and set up the backlog, board and repository for the project.
@@ -22,7 +22,7 @@ Model the marketplace at a strategic level, agree the scope of our two major fun
 | # | Task | Owner | Points |
 |---|---|---|---|
 | T1 | Set up GitHub repository structure and README | Rohan | 1 |
-| T2 | Set up project board and make it accessible to markers | Rohan | 1 |
+| T2 | Set up project board (GitHub, then moved to Jira) and make it accessible to markers | Rohan | 1 |
 | T3 | Identify stakeholders, their needs and external services | Tahmid | 3 |
 | T4 | Identify major business processes and responsibilities | Tahmid | 3 |
 | T5 | Draft strategic BPMN (pools, lanes, major processes) | Hamza | 5 |
@@ -30,7 +30,7 @@ Model the marketplace at a strategic level, agree the scope of our two major fun
 | T7 | Scope Checkout & Stock Validation, including exception paths | Yunus | 3 |
 | T8 | Scope Payment & Order Processing, including exception paths | Mackenzie | 3 |
 | T9 | Get both functionalities agreed with the module team | Mackenzie | 1 |
-| T10 | Write product backlog with priorities and story points | Rohan | 3 |
+| T10 | Write product backlog and Sprint 1 Plan | Rohan | 3 |
 | T11 | Group review of strategic BPMN and fixes | All | 3 |
 | T12 | Plan and rehearse / record Sprint 1 review | All | 3 |
 | T13 | Prepare and submit ZIP (links, screenshots, video if used) | Rohan | 1 |
@@ -48,7 +48,7 @@ Task status is tracked live on our Jira project board: https://live-team-oq9nzy4
 | Thu 29 Oct | Submit ZIP before 14:00 |
 
 ## Definition of done
-- Work is committed to the repository by the person who did it.
+- Work is committed to the repository by the person who did it or labelled as co-authored.
 - Another member has reviewed it (pull request or group call/meeting).
 - The task is moved to Done on the board.
 
@@ -56,8 +56,8 @@ Task status is tracked live on our Jira project board: https://live-team-oq9nzy4
 
 | Risk | Action |
 |---|---|
-| Functionalities not yet approved by module team | Mackenzie to confirm at the next practical session |
-| Members unavailable for in-class review | Choose video format if anyone may be absent |
-| Markers cannot open links | Make repo and board public; test in a private browser window |
+| Functionalities not yet approved by module team | Mackenzie to confirm at the next practical session | Open |
+| Getting all five members on camera before the deadline | Record on Tue 27 or Wed 28 Oct to leave time for a retake; do a short test recording first | Open |
+| Markers cannot open links | Repo made public; Jira board screenshots included in the ZIP | Open |
 
 *AI was used in an assistive role throughout this document. It was reviewed by our team and changes were made.*
