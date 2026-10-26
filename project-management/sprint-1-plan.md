@@ -2,7 +2,7 @@
 
 **Sprint dates:** 12 October 2026 – 29 October 2026
 **Review submission:** Thursday 29 October 2026, 14:00 (ZIP on Blackboard)
-**Review format:** Video
+**Review format:** In-Class
 
 ## Sprint goal
 Model the marketplace at a strategic level, agree the scope of our two major functionalities, and set up the backlog, board and repository for the project.
@@ -70,7 +70,7 @@ Points include Sprint 1 tasks and backlog items; shared items (T11, T12, PW8) ar
 | Risk | Action | Status |
 |---|---|---|
 | Functionalities not yet approved by module team | Mackenzie to confirm at the next practical session | Open |
-| Getting all five members on camera before the deadline | Record on Tue 27 or Wed 28 Oct to leave time for a retake; do a short test recording first | Open |
+| Getting all members to complete the in person demonstration | If a member cant make it we can make the video | Open |
 | Markers cannot open links | Repo made public; Jira board screenshots included in the ZIP | Open |
 
 *AI was used in an assistive role throughout this document. It was reviewed by our team and changes were made.*
