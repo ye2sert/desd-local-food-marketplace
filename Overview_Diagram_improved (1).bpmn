@@ -1,0 +1,997 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<bpmn:definitions xmlns:bioc="http://bpmn.io/schema/bpmn/biocolor/1.0" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:color="http://www.omg.org/spec/BPMN/non-normative/color/1.0" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:modeler="http://camunda.org/schema/modeler/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_Overview" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Web Modeler" exporterVersion="f127538" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.10.0">
+  <bpmn:collaboration id="Collaboration_Overview">
+    <bpmn:participant id="Participant_Customer" name="Customer" processRef="Process_Customer" />
+    <bpmn:participant id="Participant_Payment" name="Payment service (test)"><bpmn:documentation>An outside payment company, used in test (sandbox) mode. We only show what we send to it and get back.</bpmn:documentation></bpmn:participant>
+    <bpmn:participant id="Participant_Marketplace" name="Marketplace" processRef="Process_Marketplace" />
+    <bpmn:participant id="Participant_Cert" name="Certificate checker (test)" />
+    <bpmn:participant id="Participant_Producer" name="Producers" processRef="Process_Producer" />
+    <bpmn:messageFlow id="Message_BrowseSearch" name="Search" sourceRef="Customer_BrowseProductsAndFillBasket" targetRef="Marketplace_CustomerStartsShopping" />
+    <bpmn:messageFlow id="Message_Basket" name="Basket" sourceRef="Customer_ProceedToCheckout" targetRef="Marketplace_CheckoutAndStockValidation" />
+    <bpmn:messageFlow id="Message_OrderSummaryStockIssues" name="Summary" sourceRef="Marketplace_CheckoutAndStockValidation" targetRef="Customer_ReviewOrderAmendBasketIfNeededConfirm" />
+    <bpmn:messageFlow id="Message_AmendmentsConfirmation" name="Changes / confirm / cancel" sourceRef="Customer_ReviewOrderAmendBasketIfNeededConfirm" targetRef="Marketplace_CheckoutAndStockValidation" />
+    <bpmn:messageFlow id="Message_PaymentDetails" name="Payment details" sourceRef="Customer_EnterPaymentDetails" targetRef="Marketplace_PaymentAndOrderProcessing" />
+    <bpmn:messageFlow id="Message_OrderConfirmation" name="Payment result" sourceRef="Marketplace_PaymentAndOrderProcessing" targetRef="Customer_OrderConfirmationReceived" />
+    <bpmn:messageFlow id="Message_PaymentRequest" name="Charge" sourceRef="Marketplace_PaymentAndOrderProcessing" targetRef="Participant_Payment" />
+    <bpmn:messageFlow id="Message_PaymentResult" name="Result" sourceRef="Participant_Payment" targetRef="Marketplace_PaymentAndOrderProcessing" />
+    <bpmn:messageFlow id="Message_DeliveryCollection" name="Delivery time" sourceRef="Marketplace_CoordinateDeliveryOrCollection" targetRef="Customer_ReceiveDeliveryOrCollectOrder" />
+    <bpmn:messageFlow id="Message_ProducerOrder" name="Order" sourceRef="Marketplace_PaymentAndOrderProcessing" targetRef="Producer_ProducerOrderReceived" />
+    <bpmn:messageFlow id="Message_OrderReady" name="Ready" sourceRef="Producer_OrderReady" targetRef="Marketplace_CoordinateDeliveryOrCollection" />
+    <bpmn:messageFlow id="Message_ProductDetails" name="Product details" sourceRef="Producer_SubmitProductDetails" targetRef="Marketplace_ProductDetailsReceived" />
+    <bpmn:messageFlow id="Message_CertificateCheck" name="Certificate check" sourceRef="Marketplace_ValidateProductDetails" targetRef="Participant_Cert" />
+    <bpmn:messageFlow id="Message_VerificationResult" name="Result" sourceRef="Participant_Cert" targetRef="Marketplace_ValidateProductDetails" />
+    <bpmn:messageFlow id="Message_CorrectionsNeeded" name="Please fix" sourceRef="Marketplace_CorrectionsRequested" targetRef="Producer_SubmitProductDetails" />
+    <bpmn:messageFlow id="Message_StockUpdate" name="Stock update" sourceRef="Producer_UpdateStockLevels" targetRef="Marketplace_StockUpdateReceived" />
+    <bpmn:messageFlow id="Message_ProblemReport_FromCustomer" name="Problem" sourceRef="Customer_ReportProblem" targetRef="Marketplace_FoodProblemReported" />
+    <bpmn:messageFlow id="Message_ProblemReport_FromProducer" name="Problem" sourceRef="Producer_ReportProblem" targetRef="Marketplace_FoodProblemReported" />
+    <bpmn:messageFlow id="Message_InformationRequest" name="Question" sourceRef="Marketplace_RequestInformationFromProducer" targetRef="Producer_InformationRequested" />
+    <bpmn:messageFlow id="Message_ProductInformation" name="Answer" sourceRef="Producer_ProvideProductInformation" targetRef="Marketplace_RequestInformationFromProducer" />
+    <bpmn:messageFlow id="Message_SafetyNotice" name="Warning" sourceRef="Marketplace_SuspendProductAndNotifyAffectedCustomers" targetRef="Customer_SafetyNoticeReceived" />
+    <bpmn:messageFlow id="Message_Application" name="Application" sourceRef="Producer_ApplyToSell" targetRef="Marketplace_ProducerApplicationReceived" />
+    <bpmn:messageFlow id="Message_PayoutRequest" name="Payout" sourceRef="Marketplace_PayProducersWeekly" targetRef="Participant_Payment" /><bpmn:messageFlow id="Message_PayoutConfirmation" name="Payout done" sourceRef="Participant_Payment" targetRef="Marketplace_PayProducersWeekly" /><bpmn:messageFlow id="Message_PaymentStatement" name="Payment statement" sourceRef="Marketplace_PayProducersWeekly" targetRef="Participant_Producer" /><bpmn:messageFlow id="Message_SurplusAndRecipes" name="Offers &amp; recipes" sourceRef="Participant_Producer" targetRef="Marketplace_OfferOrRecipeReceived" /><bpmn:messageFlow id="Message_OffersAndRecipes" name="Offers &amp; recipes" sourceRef="Marketplace_ShareOffersAndRecipes" targetRef="Participant_Customer" /><bpmn:textAnnotation id="Note_Overview"><bpmn:text>KEY:
+BLUE = our use case (ordering and paying). We build this.
+WHITE = the rest of the business, for context.
++ box = click to see inside.</bpmn:text></bpmn:textAnnotation>
+    </bpmn:collaboration>
+  <bpmn:process id="Process_Customer" name="Customer" isExecutable="false">
+    <bpmn:startEvent id="Customer_WantsToBuyLocalFood" name="Wants food">
+      <bpmn:outgoing>Flow_WantsToBuyLocalFood_To_BrowseProductsAndFillBasket</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="Customer_BrowseProductsAndFillBasket" name="Fill basket">
+      <bpmn:incoming>Flow_WantsToBuyLocalFood_To_BrowseProductsAndFillBasket</bpmn:incoming>
+      <bpmn:outgoing>Flow_BrowseProductsAndFillBasket_To_ProceedToCheckout</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Customer_ProceedToCheckout" name="Go to checkout">
+      <bpmn:incoming>Flow_BrowseProductsAndFillBasket_To_ProceedToCheckout</bpmn:incoming>
+      <bpmn:outgoing>Flow_ProceedToCheckout_To_ReviewOrderAmendBasketIfNeededConfirm</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Customer_ReviewOrderAmendBasketIfNeededConfirm" name="Review order">
+      <bpmn:incoming>Flow_ProceedToCheckout_To_ReviewOrderAmendBasketIfNeededConfirm</bpmn:incoming>
+      <bpmn:outgoing>Flow_ReviewOrderAmendBasketIfNeededConfirm_To_EnterPaymentDetails</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Customer_EnterPaymentDetails" name="Pay for order">
+      <bpmn:incoming>Flow_GoAhead_To_Pay</bpmn:incoming><bpmn:outgoing>Flow_EnterPaymentDetails_To_OrderConfirmationReceived</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:intermediateCatchEvent id="Customer_OrderConfirmationReceived" name="Payment result">
+      <bpmn:incoming>Flow_EnterPaymentDetails_To_OrderConfirmationReceived</bpmn:incoming>
+      <bpmn:outgoing>Flow_OrderConfirmationReceived_To_ReceiveDeliveryOrCollectOrder</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="Customer_OrderConfirmationReceived_MessageDefinition" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:receiveTask id="Customer_ReceiveDeliveryOrCollectOrder" name="Get the order">
+      <bpmn:incoming>Flow_Paid_To_GetTheOrder</bpmn:incoming><bpmn:outgoing>Flow_ReceiveDeliveryOrCollectOrder_To_OrderReceived</bpmn:outgoing>
+    </bpmn:receiveTask>
+    <bpmn:endEvent id="Customer_OrderReceived" name="Order received">
+      <bpmn:incoming>Flow_ReceiveDeliveryOrCollectOrder_To_OrderReceived</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:startEvent id="Customer_FindsAFoodProblem" name="Finds a problem">
+      <bpmn:outgoing>Flow_FindsAFoodProblem_To_ReportProblem</bpmn:outgoing>
+      <bpmn:conditionalEventDefinition id="Customer_FindsAFoodProblem_ConditionDefinition"><bpmn:condition xsi:type="bpmn:tFormalExpression" /></bpmn:conditionalEventDefinition>
+    </bpmn:startEvent>
+    <bpmn:task id="Customer_ReportProblem" name="Report problem">
+      <bpmn:incoming>Flow_FindsAFoodProblem_To_ReportProblem</bpmn:incoming>
+      <bpmn:outgoing>Flow_ReportProblem_To_ProblemReported</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="Customer_ProblemReported" name="Problem reported">
+      <bpmn:incoming>Flow_ReportProblem_To_ProblemReported</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:startEvent id="Customer_SafetyNoticeReceived" name="Gets a warning">
+      <bpmn:outgoing>Flow_SafetyNoticeReceived_To_FollowSafetyAdvice</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="Customer_SafetyNoticeReceived_MessageDefinition" />
+    </bpmn:startEvent>
+    <bpmn:task id="Customer_FollowSafetyAdvice" name="Follow safety advice">
+      <bpmn:incoming>Flow_SafetyNoticeReceived_To_FollowSafetyAdvice</bpmn:incoming>
+      <bpmn:outgoing>Flow_FollowSafetyAdvice_To_CustomerInformed</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="Customer_CustomerInformed" name="Warned">
+      <bpmn:incoming>Flow_FollowSafetyAdvice_To_CustomerInformed</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_WantsToBuyLocalFood_To_BrowseProductsAndFillBasket" sourceRef="Customer_WantsToBuyLocalFood" targetRef="Customer_BrowseProductsAndFillBasket" />
+    <bpmn:sequenceFlow id="Flow_BrowseProductsAndFillBasket_To_ProceedToCheckout" sourceRef="Customer_BrowseProductsAndFillBasket" targetRef="Customer_ProceedToCheckout" />
+    <bpmn:sequenceFlow id="Flow_ProceedToCheckout_To_ReviewOrderAmendBasketIfNeededConfirm" sourceRef="Customer_ProceedToCheckout" targetRef="Customer_ReviewOrderAmendBasketIfNeededConfirm" />
+    <bpmn:sequenceFlow id="Flow_ReviewOrderAmendBasketIfNeededConfirm_To_EnterPaymentDetails" sourceRef="Customer_ReviewOrderAmendBasketIfNeededConfirm" targetRef="Customer_GoAhead" />
+    <bpmn:sequenceFlow id="Flow_EnterPaymentDetails_To_OrderConfirmationReceived" sourceRef="Customer_EnterPaymentDetails" targetRef="Customer_OrderConfirmationReceived" />
+    <bpmn:sequenceFlow id="Flow_OrderConfirmationReceived_To_ReceiveDeliveryOrCollectOrder" sourceRef="Customer_OrderConfirmationReceived" targetRef="Customer_Paid" />
+    <bpmn:sequenceFlow id="Flow_ReceiveDeliveryOrCollectOrder_To_OrderReceived" sourceRef="Customer_ReceiveDeliveryOrCollectOrder" targetRef="Customer_OrderReceived" />
+    <bpmn:sequenceFlow id="Flow_FindsAFoodProblem_To_ReportProblem" sourceRef="Customer_FindsAFoodProblem" targetRef="Customer_ReportProblem" />
+    <bpmn:sequenceFlow id="Flow_ReportProblem_To_ProblemReported" sourceRef="Customer_ReportProblem" targetRef="Customer_ProblemReported" />
+    <bpmn:sequenceFlow id="Flow_SafetyNoticeReceived_To_FollowSafetyAdvice" sourceRef="Customer_SafetyNoticeReceived" targetRef="Customer_FollowSafetyAdvice" />
+    <bpmn:sequenceFlow id="Flow_FollowSafetyAdvice_To_CustomerInformed" sourceRef="Customer_FollowSafetyAdvice" targetRef="Customer_CustomerInformed" />
+  <bpmn:exclusiveGateway id="Customer_GoAhead" name="Confirm purchase?"><bpmn:incoming>Flow_ReviewOrderAmendBasketIfNeededConfirm_To_EnterPaymentDetails</bpmn:incoming><bpmn:outgoing>Flow_GoAhead_To_GaveUp</bpmn:outgoing><bpmn:outgoing>Flow_GoAhead_To_Pay</bpmn:outgoing></bpmn:exclusiveGateway><bpmn:endEvent id="Customer_GaveUp" name="Gave up"><bpmn:incoming>Flow_GoAhead_To_GaveUp</bpmn:incoming></bpmn:endEvent><bpmn:sequenceFlow id="Flow_GoAhead_To_Pay" sourceRef="Customer_GoAhead" targetRef="Customer_EnterPaymentDetails" name="Yes" /><bpmn:sequenceFlow id="Flow_GoAhead_To_GaveUp" sourceRef="Customer_GoAhead" targetRef="Customer_GaveUp" name="No" /><bpmn:exclusiveGateway id="Customer_Paid" name="Paid?"><bpmn:incoming>Flow_OrderConfirmationReceived_To_ReceiveDeliveryOrCollectOrder</bpmn:incoming><bpmn:outgoing>Flow_Paid_To_NoOrder</bpmn:outgoing><bpmn:outgoing>Flow_Paid_To_GetTheOrder</bpmn:outgoing></bpmn:exclusiveGateway><bpmn:endEvent id="Customer_NoOrder" name="No order"><bpmn:incoming>Flow_Paid_To_NoOrder</bpmn:incoming></bpmn:endEvent><bpmn:sequenceFlow id="Flow_Paid_To_GetTheOrder" sourceRef="Customer_Paid" targetRef="Customer_ReceiveDeliveryOrCollectOrder" name="Yes" /><bpmn:sequenceFlow id="Flow_Paid_To_NoOrder" sourceRef="Customer_Paid" targetRef="Customer_NoOrder" name="No" /></bpmn:process>
+  <bpmn:process id="Process_Marketplace" name="Local Food Marketplace Platform" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_Marketplace">
+      <bpmn:lane id="Lane_Orders" name="Orders &amp; Payments">
+        <bpmn:flowNodeRef>Marketplace_CustomerStartsShopping</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Marketplace_FindProducts</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Marketplace_CheckoutAndStockValidation</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Marketplace_PaymentAndOrderProcessing</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Marketplace_CoordinateDeliveryOrCollection</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Marketplace_OrderComplete</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Marketplace_CheckoutCancelledOrTimedOut</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Marketplace_CheckoutAbandoned</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Marketplace_PaymentFailedAfterRetries</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Marketplace_OrderNotPlaced</bpmn:flowNodeRef>
+      <bpmn:flowNodeRef>Marketplace_EveryWeek</bpmn:flowNodeRef><bpmn:flowNodeRef>Marketplace_PayProducersWeekly</bpmn:flowNodeRef><bpmn:flowNodeRef>Marketplace_ProducersPaid</bpmn:flowNodeRef><bpmn:flowNodeRef>Marketplace_OfferOrRecipeReceived</bpmn:flowNodeRef><bpmn:flowNodeRef>Marketplace_ShareOffersAndRecipes</bpmn:flowNodeRef><bpmn:flowNodeRef>Marketplace_CustomersInformed</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="Lane_Staff" name="Staff">
+        <bpmn:flowNodeRef>Marketplace_FoodProblemReported</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Marketplace_RecordIncidentAndIdentifyProduct</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Marketplace_RequestInformationFromProducer</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Marketplace_GenuineRisk</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Marketplace_SuspendProductAndNotifyAffectedCustomers</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Marketplace_ReviewIncident</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Marketplace_IncidentClosed</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Marketplace_NoGenuineRisk</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Marketplace_ProducerApplicationReceived</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Marketplace_VerifyAndRegisterProducer</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Marketplace_ProducerRegistered</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Products" name="Products &amp; stock">
+        <bpmn:flowNodeRef>Marketplace_ProductDetailsReceived</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Marketplace_ValidateProductDetails</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Marketplace_DetailsValid</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Marketplace_PublishProduct</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Marketplace_ProductAvailable</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Marketplace_CorrectionsRequested</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Marketplace_StockUpdateReceived</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Marketplace_UpdateStockAndAvailability</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Marketplace_AvailabilityUpdated</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Marketplace_CustomerStartsShopping" name="Customer arrives">
+      <bpmn:outgoing>Flow_CustomerStartsShopping_To_FindProducts</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="Marketplace_CustomerStartsShopping_MessageDefinition" />
+    </bpmn:startEvent>
+    <bpmn:subProcess id="Marketplace_FindProducts" name="Show products">
+      <bpmn:incoming>Flow_CustomerStartsShopping_To_FindProducts</bpmn:incoming>
+      <bpmn:outgoing>Flow_FindProducts_To_CheckoutAndStockValidation</bpmn:outgoing>
+      <bpmn:property id="FindProducts_Reads_ProductAndStockRecords_Input" name="__targetRef_placeholder" />
+      <bpmn:dataInputAssociation id="FindProducts_Reads_ProductAndStockRecords"><bpmn:sourceRef>ProductAndStockRecords_Checkout</bpmn:sourceRef><bpmn:targetRef>FindProducts_Reads_ProductAndStockRecords_Input</bpmn:targetRef></bpmn:dataInputAssociation>
+      <bpmn:startEvent id="FindProducts_SearchStarted" name="Search started">
+        <bpmn:outgoing>Flow_SearchStarted_To_SearchOrBrowseTheCatalogue</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:task id="FindProducts_SearchOrBrowseTheCatalogue" name="Search or browse the catalogue">
+        <bpmn:incoming>Flow_SearchStarted_To_SearchOrBrowseTheCatalogue</bpmn:incoming>
+        <bpmn:outgoing>Flow_SearchOrBrowseTheCatalogue_To_ShowProductsThatAreInStock</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:task id="FindProducts_ShowProductsThatAreInStock" name="Show products that are in stock">
+        <bpmn:incoming>Flow_SearchOrBrowseTheCatalogue_To_ShowProductsThatAreInStock</bpmn:incoming>
+        <bpmn:outgoing>Flow_ShowProductsThatAreInStock_To_ProductsShown</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:endEvent id="FindProducts_ProductsShown" name="Products shown">
+        <bpmn:incoming>Flow_ShowProductsThatAreInStock_To_ProductsShown</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="Flow_SearchStarted_To_SearchOrBrowseTheCatalogue" sourceRef="FindProducts_SearchStarted" targetRef="FindProducts_SearchOrBrowseTheCatalogue" />
+      <bpmn:sequenceFlow id="Flow_SearchOrBrowseTheCatalogue_To_ShowProductsThatAreInStock" sourceRef="FindProducts_SearchOrBrowseTheCatalogue" targetRef="FindProducts_ShowProductsThatAreInStock" />
+      <bpmn:sequenceFlow id="Flow_ShowProductsThatAreInStock_To_ProductsShown" sourceRef="FindProducts_ShowProductsThatAreInStock" targetRef="FindProducts_ProductsShown" />
+    </bpmn:subProcess>
+    <bpmn:subProcess id="Marketplace_CheckoutAndStockValidation" name="Checkout &amp; Stock Validation">
+      <bpmn:documentation>Functionality 1. Checks every item is in stock, finds which producers are involved, and sorts out delivery or collection. If something is short, the customer changes the basket and it is checked again.</bpmn:documentation><bpmn:incoming>Flow_FindProducts_To_CheckoutAndStockValidation</bpmn:incoming>
+      <bpmn:outgoing>Flow_CheckoutAndStockValidation_To_PaymentAndOrderProcessing</bpmn:outgoing>
+      <bpmn:property id="CheckoutAndStockValidation_Reads_ProductAndStockRecords_Input" name="__targetRef_placeholder" />
+      <bpmn:dataInputAssociation id="CheckoutAndStockValidation_Reads_ProductAndStockRecords"><bpmn:sourceRef>ProductAndStockRecords_Checkout</bpmn:sourceRef><bpmn:targetRef>CheckoutAndStockValidation_Reads_ProductAndStockRecords_Input</bpmn:targetRef></bpmn:dataInputAssociation>
+      <bpmn:startEvent id="CheckoutAndStockValidation_CheckoutStarted" name="Checkout started">
+        <bpmn:outgoing>Flow_CheckoutStarted_To_StockCheckMerge</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:exclusiveGateway id="CheckoutAndStockValidation_StockCheckMerge" name="">
+        <bpmn:incoming>Flow_CheckoutStarted_To_StockCheckMerge</bpmn:incoming>
+        <bpmn:incoming>Flow_ContinueWithOrder_To_StockCheckMerge</bpmn:incoming>
+        <bpmn:outgoing>Flow_StockCheckMerge_To_CheckStockForEachItem</bpmn:outgoing>
+      </bpmn:exclusiveGateway>
+      <bpmn:task id="CheckoutAndStockValidation_CheckStockForEachItem" name="Check stock for each item">
+        <bpmn:incoming>Flow_StockCheckMerge_To_CheckStockForEachItem</bpmn:incoming>
+        <bpmn:outgoing>Flow_CheckStockForEachItem_To_AllItemsInStock</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:exclusiveGateway id="CheckoutAndStockValidation_AllItemsInStock" name="All items in stock?">
+        <bpmn:incoming>Flow_CheckStockForEachItem_To_AllItemsInStock</bpmn:incoming>
+        <bpmn:outgoing>Flow_AllItemsInStock_To_IdentifyProducersInvolved</bpmn:outgoing>
+        <bpmn:outgoing>Flow_AllItemsInStock_To_AskCustomerToAmendBasket</bpmn:outgoing>
+      </bpmn:exclusiveGateway>
+      <bpmn:task id="CheckoutAndStockValidation_IdentifyProducersInvolved" name="Identify producers involved">
+        <bpmn:incoming>Flow_AllItemsInStock_To_IdentifyProducersInvolved</bpmn:incoming>
+        <bpmn:outgoing>Flow_IdentifyProducersInvolved_To_DetermineDeliveryOrCollection</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:task id="CheckoutAndStockValidation_DetermineDeliveryOrCollection" name="Determine delivery or collection">
+        <bpmn:incoming>Flow_IdentifyProducersInvolved_To_DetermineDeliveryOrCollection</bpmn:incoming>
+        <bpmn:outgoing>Flow_DetermineDeliveryOrCollection_To_CustomerReviewsAndConfirmsOrder</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:task id="CheckoutAndStockValidation_CustomerReviewsAndConfirmsOrder" name="Customer reviews and confirms order">
+        <bpmn:incoming>Flow_DetermineDeliveryOrCollection_To_CustomerReviewsAndConfirmsOrder</bpmn:incoming>
+        <bpmn:outgoing>Flow_CustomerReviewsAndConfirmsOrder_To_OrderReadyForPayment</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:endEvent id="CheckoutAndStockValidation_OrderReadyForPayment" name="Order ready for payment">
+        <bpmn:incoming>Flow_CustomerReviewsAndConfirmsOrder_To_OrderReadyForPayment</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:task id="CheckoutAndStockValidation_AskCustomerToAmendBasket" name="Ask customer to amend basket">
+        <bpmn:incoming>Flow_AllItemsInStock_To_AskCustomerToAmendBasket</bpmn:incoming>
+        <bpmn:outgoing>Flow_AskCustomerToAmendBasket_To_ContinueWithOrder</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:exclusiveGateway id="CheckoutAndStockValidation_ContinueWithOrder" name="Continue with order?">
+        <bpmn:incoming>Flow_AskCustomerToAmendBasket_To_ContinueWithOrder</bpmn:incoming>
+        <bpmn:outgoing>Flow_ContinueWithOrder_To_CheckoutCancelled</bpmn:outgoing>
+        <bpmn:outgoing>Flow_ContinueWithOrder_To_StockCheckMerge</bpmn:outgoing>
+      </bpmn:exclusiveGateway>
+      <bpmn:endEvent id="CheckoutAndStockValidation_CheckoutCancelled" name="Checkout cancelled">
+        <bpmn:incoming>Flow_ContinueWithOrder_To_CheckoutCancelled</bpmn:incoming>
+        <bpmn:errorEventDefinition id="CheckoutAndStockValidation_CheckoutCancelled_ErrorDefinition" errorRef="Error_CheckoutCancelled" />
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="Flow_CheckoutStarted_To_StockCheckMerge" sourceRef="CheckoutAndStockValidation_CheckoutStarted" targetRef="CheckoutAndStockValidation_StockCheckMerge" />
+      <bpmn:sequenceFlow id="Flow_StockCheckMerge_To_CheckStockForEachItem" sourceRef="CheckoutAndStockValidation_StockCheckMerge" targetRef="CheckoutAndStockValidation_CheckStockForEachItem" />
+      <bpmn:sequenceFlow id="Flow_CheckStockForEachItem_To_AllItemsInStock" sourceRef="CheckoutAndStockValidation_CheckStockForEachItem" targetRef="CheckoutAndStockValidation_AllItemsInStock" />
+      <bpmn:sequenceFlow id="Flow_IdentifyProducersInvolved_To_DetermineDeliveryOrCollection" sourceRef="CheckoutAndStockValidation_IdentifyProducersInvolved" targetRef="CheckoutAndStockValidation_DetermineDeliveryOrCollection" />
+      <bpmn:sequenceFlow id="Flow_DetermineDeliveryOrCollection_To_CustomerReviewsAndConfirmsOrder" sourceRef="CheckoutAndStockValidation_DetermineDeliveryOrCollection" targetRef="CheckoutAndStockValidation_CustomerReviewsAndConfirmsOrder" />
+      <bpmn:sequenceFlow id="Flow_CustomerReviewsAndConfirmsOrder_To_OrderReadyForPayment" sourceRef="CheckoutAndStockValidation_CustomerReviewsAndConfirmsOrder" targetRef="CheckoutAndStockValidation_OrderReadyForPayment" />
+      <bpmn:sequenceFlow id="Flow_AskCustomerToAmendBasket_To_ContinueWithOrder" sourceRef="CheckoutAndStockValidation_AskCustomerToAmendBasket" targetRef="CheckoutAndStockValidation_ContinueWithOrder" />
+      <bpmn:sequenceFlow id="Flow_AllItemsInStock_To_IdentifyProducersInvolved" name="Yes" sourceRef="CheckoutAndStockValidation_AllItemsInStock" targetRef="CheckoutAndStockValidation_IdentifyProducersInvolved" />
+      <bpmn:sequenceFlow id="Flow_AllItemsInStock_To_AskCustomerToAmendBasket" name="No" sourceRef="CheckoutAndStockValidation_AllItemsInStock" targetRef="CheckoutAndStockValidation_AskCustomerToAmendBasket" />
+      <bpmn:sequenceFlow id="Flow_ContinueWithOrder_To_CheckoutCancelled" name="No" sourceRef="CheckoutAndStockValidation_ContinueWithOrder" targetRef="CheckoutAndStockValidation_CheckoutCancelled" />
+      <bpmn:sequenceFlow id="Flow_ContinueWithOrder_To_StockCheckMerge" name="Yes" sourceRef="CheckoutAndStockValidation_ContinueWithOrder" targetRef="CheckoutAndStockValidation_StockCheckMerge" />
+    </bpmn:subProcess>
+    <bpmn:subProcess id="Marketplace_PaymentAndOrderProcessing" name="Payment &amp; Order Processing">
+      <bpmn:documentation>Functionality 2. Creates the order, splits it per producer, takes payment (the customer can retry), updates stock, tells producers, and works out the 5% commission (on a GBP 100 sale the producer gets GBP 95).</bpmn:documentation><bpmn:incoming>Flow_CheckoutAndStockValidation_To_PaymentAndOrderProcessing</bpmn:incoming>
+      <bpmn:outgoing>Flow_PaymentAndOrderProcessing_To_CoordinateDeliveryOrCollection</bpmn:outgoing>
+      <bpmn:dataOutputAssociation id="PaymentAndOrderProcessing_Updates_OrderCustomerAndProducerRecords"><bpmn:targetRef>OrderCustomerAndProducerRecords_OrderProcessing</bpmn:targetRef></bpmn:dataOutputAssociation>
+      <bpmn:dataOutputAssociation id="PaymentAndOrderProcessing_Updates_ProductAndStockRecords"><bpmn:targetRef>ProductAndStockRecords_OrderProcessing</bpmn:targetRef></bpmn:dataOutputAssociation>
+      <bpmn:startEvent id="PaymentAndOrderProcessing_OrderConfirmedByCustomer" name="Order confirmed by customer">
+        <bpmn:outgoing>Flow_OrderConfirmedByCustomer_To_CreateMarketplaceOrder</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:task id="PaymentAndOrderProcessing_CreateMarketplaceOrder" name="Create marketplace order">
+        <bpmn:incoming>Flow_OrderConfirmedByCustomer_To_CreateMarketplaceOrder</bpmn:incoming>
+        <bpmn:outgoing>Flow_CreateMarketplaceOrder_To_SplitOrderByProducer</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:task id="PaymentAndOrderProcessing_SplitOrderByProducer" name="Split order by producer">
+        <bpmn:incoming>Flow_CreateMarketplaceOrder_To_SplitOrderByProducer</bpmn:incoming>
+        <bpmn:outgoing>Flow_SplitOrderByProducer_To_PaymentAttemptMerge</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:exclusiveGateway id="PaymentAndOrderProcessing_PaymentAttemptMerge" name="">
+        <bpmn:incoming>Flow_SplitOrderByProducer_To_PaymentAttemptMerge</bpmn:incoming>
+        <bpmn:incoming>Flow_RetryPayment_To_PaymentAttemptMerge</bpmn:incoming>
+        <bpmn:outgoing>Flow_PaymentAttemptMerge_To_SendPaymentToPaymentService</bpmn:outgoing>
+      </bpmn:exclusiveGateway>
+      <bpmn:task id="PaymentAndOrderProcessing_SendPaymentToPaymentService" name="Send payment to payment service">
+        <bpmn:incoming>Flow_PaymentAttemptMerge_To_SendPaymentToPaymentService</bpmn:incoming>
+        <bpmn:outgoing>Flow_SendPaymentToPaymentService_To_PaymentSuccessful</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:exclusiveGateway id="PaymentAndOrderProcessing_PaymentSuccessful" name="Payment successful?">
+        <bpmn:incoming>Flow_SendPaymentToPaymentService_To_PaymentSuccessful</bpmn:incoming>
+        <bpmn:outgoing>Flow_PaymentSuccessful_To_ConfirmOrder</bpmn:outgoing>
+        <bpmn:outgoing>Flow_PaymentSuccessful_To_TellCustomerThePaymentDidNotGoThrough</bpmn:outgoing>
+      </bpmn:exclusiveGateway>
+      <bpmn:task id="PaymentAndOrderProcessing_ConfirmOrder" name="Confirm order">
+        <bpmn:incoming>Flow_PaymentSuccessful_To_ConfirmOrder</bpmn:incoming>
+        <bpmn:outgoing>Flow_ConfirmOrder_To_UpdateStock</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:task id="PaymentAndOrderProcessing_UpdateStock" name="Update stock">
+        <bpmn:incoming>Flow_ConfirmOrder_To_UpdateStock</bpmn:incoming>
+        <bpmn:outgoing>Flow_UpdateStock_To_NotifyProducers</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:task id="PaymentAndOrderProcessing_NotifyProducers" name="Notify producers">
+        <bpmn:incoming>Flow_UpdateStock_To_NotifyProducers</bpmn:incoming>
+        <bpmn:outgoing>Flow_NotifyProducers_To_CalculateProducerAmountsAnd5Commission</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:task id="PaymentAndOrderProcessing_CalculateProducerAmountsAnd5Commission" name="Calculate producer amounts and 5% commission">
+        <bpmn:incoming>Flow_NotifyProducers_To_CalculateProducerAmountsAnd5Commission</bpmn:incoming>
+        <bpmn:outgoing>Flow_CalculateProducerAmountsAnd5Commission_To_OrderPlaced</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:endEvent id="PaymentAndOrderProcessing_OrderPlaced" name="Order placed">
+        <bpmn:incoming>Flow_CalculateProducerAmountsAnd5Commission_To_OrderPlaced</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:task id="PaymentAndOrderProcessing_TellCustomerThePaymentDidNotGoThrough" name="Tell customer the payment did not go through">
+        <bpmn:incoming>Flow_PaymentSuccessful_To_TellCustomerThePaymentDidNotGoThrough</bpmn:incoming>
+        <bpmn:outgoing>Flow_TellCustomerThePaymentDidNotGoThrough_To_RetryPayment</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:exclusiveGateway id="PaymentAndOrderProcessing_RetryPayment" name="Retry payment?">
+        <bpmn:incoming>Flow_TellCustomerThePaymentDidNotGoThrough_To_RetryPayment</bpmn:incoming>
+        <bpmn:outgoing>Flow_RetryPayment_To_PaymentFailed</bpmn:outgoing>
+        <bpmn:outgoing>Flow_RetryPayment_To_PaymentAttemptMerge</bpmn:outgoing>
+      </bpmn:exclusiveGateway>
+      <bpmn:endEvent id="PaymentAndOrderProcessing_PaymentFailed" name="Payment failed">
+        <bpmn:incoming>Flow_RetryPayment_To_PaymentFailed</bpmn:incoming>
+        <bpmn:errorEventDefinition id="PaymentAndOrderProcessing_PaymentFailed_ErrorDefinition" errorRef="Error_PaymentFailed" />
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="Flow_OrderConfirmedByCustomer_To_CreateMarketplaceOrder" sourceRef="PaymentAndOrderProcessing_OrderConfirmedByCustomer" targetRef="PaymentAndOrderProcessing_CreateMarketplaceOrder" />
+      <bpmn:sequenceFlow id="Flow_CreateMarketplaceOrder_To_SplitOrderByProducer" sourceRef="PaymentAndOrderProcessing_CreateMarketplaceOrder" targetRef="PaymentAndOrderProcessing_SplitOrderByProducer" />
+      <bpmn:sequenceFlow id="Flow_SplitOrderByProducer_To_PaymentAttemptMerge" sourceRef="PaymentAndOrderProcessing_SplitOrderByProducer" targetRef="PaymentAndOrderProcessing_PaymentAttemptMerge" />
+      <bpmn:sequenceFlow id="Flow_PaymentAttemptMerge_To_SendPaymentToPaymentService" sourceRef="PaymentAndOrderProcessing_PaymentAttemptMerge" targetRef="PaymentAndOrderProcessing_SendPaymentToPaymentService" />
+      <bpmn:sequenceFlow id="Flow_SendPaymentToPaymentService_To_PaymentSuccessful" sourceRef="PaymentAndOrderProcessing_SendPaymentToPaymentService" targetRef="PaymentAndOrderProcessing_PaymentSuccessful" />
+      <bpmn:sequenceFlow id="Flow_ConfirmOrder_To_UpdateStock" sourceRef="PaymentAndOrderProcessing_ConfirmOrder" targetRef="PaymentAndOrderProcessing_UpdateStock" />
+      <bpmn:sequenceFlow id="Flow_UpdateStock_To_NotifyProducers" sourceRef="PaymentAndOrderProcessing_UpdateStock" targetRef="PaymentAndOrderProcessing_NotifyProducers" />
+      <bpmn:sequenceFlow id="Flow_NotifyProducers_To_CalculateProducerAmountsAnd5Commission" sourceRef="PaymentAndOrderProcessing_NotifyProducers" targetRef="PaymentAndOrderProcessing_CalculateProducerAmountsAnd5Commission" />
+      <bpmn:sequenceFlow id="Flow_CalculateProducerAmountsAnd5Commission_To_OrderPlaced" sourceRef="PaymentAndOrderProcessing_CalculateProducerAmountsAnd5Commission" targetRef="PaymentAndOrderProcessing_OrderPlaced" />
+      <bpmn:sequenceFlow id="Flow_TellCustomerThePaymentDidNotGoThrough_To_RetryPayment" sourceRef="PaymentAndOrderProcessing_TellCustomerThePaymentDidNotGoThrough" targetRef="PaymentAndOrderProcessing_RetryPayment" />
+      <bpmn:sequenceFlow id="Flow_PaymentSuccessful_To_ConfirmOrder" name="Yes" sourceRef="PaymentAndOrderProcessing_PaymentSuccessful" targetRef="PaymentAndOrderProcessing_ConfirmOrder" />
+      <bpmn:sequenceFlow id="Flow_PaymentSuccessful_To_TellCustomerThePaymentDidNotGoThrough" name="No" sourceRef="PaymentAndOrderProcessing_PaymentSuccessful" targetRef="PaymentAndOrderProcessing_TellCustomerThePaymentDidNotGoThrough" />
+      <bpmn:sequenceFlow id="Flow_RetryPayment_To_PaymentFailed" name="No" sourceRef="PaymentAndOrderProcessing_RetryPayment" targetRef="PaymentAndOrderProcessing_PaymentFailed" />
+      <bpmn:sequenceFlow id="Flow_RetryPayment_To_PaymentAttemptMerge" name="Yes" sourceRef="PaymentAndOrderProcessing_RetryPayment" targetRef="PaymentAndOrderProcessing_PaymentAttemptMerge" />
+    </bpmn:subProcess>
+    <bpmn:subProcess id="Marketplace_CoordinateDeliveryOrCollection" name="Arrange delivery">
+      <bpmn:incoming>Flow_PaymentAndOrderProcessing_To_CoordinateDeliveryOrCollection</bpmn:incoming>
+      <bpmn:outgoing>Flow_CoordinateDeliveryOrCollection_To_OrderComplete</bpmn:outgoing>
+      <bpmn:startEvent id="CoordinateDeliveryOrCollection_ProducerOrdersReady" name="Producer orders ready">
+        <bpmn:outgoing>Flow_ProducerOrdersReady_To_ArrangeDeliveryOrCollectionSlot</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:task id="CoordinateDeliveryOrCollection_ArrangeDeliveryOrCollectionSlot" name="Arrange delivery or collection slot">
+        <bpmn:incoming>Flow_ProducerOrdersReady_To_ArrangeDeliveryOrCollectionSlot</bpmn:incoming>
+        <bpmn:outgoing>Flow_ArrangeDeliveryOrCollectionSlot_To_UpdateTheCustomer</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:task id="CoordinateDeliveryOrCollection_UpdateTheCustomer" name="Update the customer">
+        <bpmn:incoming>Flow_ArrangeDeliveryOrCollectionSlot_To_UpdateTheCustomer</bpmn:incoming>
+        <bpmn:outgoing>Flow_UpdateTheCustomer_To_OrderHandedOver</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:endEvent id="CoordinateDeliveryOrCollection_OrderHandedOver" name="Order handed over">
+        <bpmn:incoming>Flow_UpdateTheCustomer_To_OrderHandedOver</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="Flow_ProducerOrdersReady_To_ArrangeDeliveryOrCollectionSlot" sourceRef="CoordinateDeliveryOrCollection_ProducerOrdersReady" targetRef="CoordinateDeliveryOrCollection_ArrangeDeliveryOrCollectionSlot" />
+      <bpmn:sequenceFlow id="Flow_ArrangeDeliveryOrCollectionSlot_To_UpdateTheCustomer" sourceRef="CoordinateDeliveryOrCollection_ArrangeDeliveryOrCollectionSlot" targetRef="CoordinateDeliveryOrCollection_UpdateTheCustomer" />
+      <bpmn:sequenceFlow id="Flow_UpdateTheCustomer_To_OrderHandedOver" sourceRef="CoordinateDeliveryOrCollection_UpdateTheCustomer" targetRef="CoordinateDeliveryOrCollection_OrderHandedOver" />
+    </bpmn:subProcess>
+    <bpmn:endEvent id="Marketplace_OrderComplete" name="Order done">
+      <bpmn:incoming>Flow_CoordinateDeliveryOrCollection_To_OrderComplete</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:boundaryEvent id="Marketplace_CheckoutCancelledOrTimedOut" name="Cancelled" attachedToRef="Marketplace_CheckoutAndStockValidation">
+      <bpmn:documentation>The customer cancelled at checkout, so the checkout ends and no order is made.</bpmn:documentation><bpmn:outgoing>Flow_CheckoutCancelledOrTimedOut_To_CheckoutAbandoned</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="Marketplace_CheckoutCancelledOrTimedOut_ErrorDefinition" errorRef="Error_CheckoutCancelled" />
+    </bpmn:boundaryEvent>
+    <bpmn:endEvent id="Marketplace_CheckoutAbandoned" name="Checkout abandoned">
+      <bpmn:incoming>Flow_CheckoutCancelledOrTimedOut_To_CheckoutAbandoned</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:boundaryEvent id="Marketplace_PaymentFailedAfterRetries" name="Payment failed" attachedToRef="Marketplace_PaymentAndOrderProcessing">
+      <bpmn:documentation>Payment still failed after the customer retried. No order is placed, nothing is charged and no stock is used.</bpmn:documentation><bpmn:outgoing>Flow_PaymentFailedAfterRetries_To_OrderNotPlaced</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="Marketplace_PaymentFailedAfterRetries_ErrorDefinition" errorRef="Error_PaymentFailed" />
+    </bpmn:boundaryEvent>
+    <bpmn:endEvent id="Marketplace_OrderNotPlaced" name="Order not placed">
+      <bpmn:incoming>Flow_PaymentFailedAfterRetries_To_OrderNotPlaced</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:startEvent id="Marketplace_FoodProblemReported" name="Problem received">
+      <bpmn:outgoing>Flow_FoodProblemReported_To_RecordIncidentAndIdentifyProduct</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="Marketplace_FoodProblemReported_MessageDefinition" />
+    </bpmn:startEvent>
+    <bpmn:subProcess id="Marketplace_RecordIncidentAndIdentifyProduct" name="Log the problem">
+      <bpmn:incoming>Flow_FoodProblemReported_To_RecordIncidentAndIdentifyProduct</bpmn:incoming>
+      <bpmn:outgoing>Flow_RecordIncidentAndIdentifyProduct_To_RequestInformationFromProducer</bpmn:outgoing>
+      <bpmn:property id="RecordIncidentAndIdentifyProduct_Reads_OrderCustomerAndProducerRecords_Input" name="__targetRef_placeholder" />
+      <bpmn:startEvent id="RecordIncidentAndIdentifyProduct_IncidentReceived" name="Incident received">
+        <bpmn:outgoing>Flow_IncidentReceived_To_CreateIncidentRecord</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:task id="RecordIncidentAndIdentifyProduct_CreateIncidentRecord" name="Create incident record">
+        <bpmn:incoming>Flow_IncidentReceived_To_CreateIncidentRecord</bpmn:incoming>
+        <bpmn:outgoing>Flow_CreateIncidentRecord_To_IdentifyProductAndProducer</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:task id="RecordIncidentAndIdentifyProduct_IdentifyProductAndProducer" name="Identify product and producer">
+        <bpmn:incoming>Flow_CreateIncidentRecord_To_IdentifyProductAndProducer</bpmn:incoming>
+        <bpmn:outgoing>Flow_IdentifyProductAndProducer_To_FindOrdersContainingTheProduct</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:task id="RecordIncidentAndIdentifyProduct_FindOrdersContainingTheProduct" name="Find orders containing the product">
+        <bpmn:incoming>Flow_IdentifyProductAndProducer_To_FindOrdersContainingTheProduct</bpmn:incoming>
+        <bpmn:outgoing>Flow_FindOrdersContainingTheProduct_To_IncidentRecorded</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:endEvent id="RecordIncidentAndIdentifyProduct_IncidentRecorded" name="Incident recorded">
+        <bpmn:incoming>Flow_FindOrdersContainingTheProduct_To_IncidentRecorded</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="Flow_IncidentReceived_To_CreateIncidentRecord" sourceRef="RecordIncidentAndIdentifyProduct_IncidentReceived" targetRef="RecordIncidentAndIdentifyProduct_CreateIncidentRecord" />
+      <bpmn:sequenceFlow id="Flow_CreateIncidentRecord_To_IdentifyProductAndProducer" sourceRef="RecordIncidentAndIdentifyProduct_CreateIncidentRecord" targetRef="RecordIncidentAndIdentifyProduct_IdentifyProductAndProducer" />
+      <bpmn:sequenceFlow id="Flow_IdentifyProductAndProducer_To_FindOrdersContainingTheProduct" sourceRef="RecordIncidentAndIdentifyProduct_IdentifyProductAndProducer" targetRef="RecordIncidentAndIdentifyProduct_FindOrdersContainingTheProduct" />
+      <bpmn:sequenceFlow id="Flow_FindOrdersContainingTheProduct_To_IncidentRecorded" sourceRef="RecordIncidentAndIdentifyProduct_FindOrdersContainingTheProduct" targetRef="RecordIncidentAndIdentifyProduct_IncidentRecorded" />
+    </bpmn:subProcess>
+    <bpmn:subProcess id="Marketplace_RequestInformationFromProducer" name="Ask the producer">
+      <bpmn:incoming>Flow_RecordIncidentAndIdentifyProduct_To_RequestInformationFromProducer</bpmn:incoming>
+      <bpmn:outgoing>Flow_RequestInformationFromProducer_To_GenuineRisk</bpmn:outgoing>
+      <bpmn:startEvent id="RequestInformationFromProducer_InformationNeeded" name="Information needed">
+        <bpmn:outgoing>Flow_InformationNeeded_To_SendInformationRequestToProducer</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:task id="RequestInformationFromProducer_SendInformationRequestToProducer" name="Send information request to producer">
+        <bpmn:incoming>Flow_InformationNeeded_To_SendInformationRequestToProducer</bpmn:incoming>
+        <bpmn:outgoing>Flow_SendInformationRequestToProducer_To_RecordProducerResponse</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:task id="RequestInformationFromProducer_RecordProducerResponse" name="Record producer response">
+        <bpmn:incoming>Flow_SendInformationRequestToProducer_To_RecordProducerResponse</bpmn:incoming>
+        <bpmn:outgoing>Flow_RecordProducerResponse_To_ResponseRecorded</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:endEvent id="RequestInformationFromProducer_ResponseRecorded" name="Response recorded">
+        <bpmn:incoming>Flow_RecordProducerResponse_To_ResponseRecorded</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="Flow_InformationNeeded_To_SendInformationRequestToProducer" sourceRef="RequestInformationFromProducer_InformationNeeded" targetRef="RequestInformationFromProducer_SendInformationRequestToProducer" />
+      <bpmn:sequenceFlow id="Flow_SendInformationRequestToProducer_To_RecordProducerResponse" sourceRef="RequestInformationFromProducer_SendInformationRequestToProducer" targetRef="RequestInformationFromProducer_RecordProducerResponse" />
+      <bpmn:sequenceFlow id="Flow_RecordProducerResponse_To_ResponseRecorded" sourceRef="RequestInformationFromProducer_RecordProducerResponse" targetRef="RequestInformationFromProducer_ResponseRecorded" />
+    </bpmn:subProcess>
+    <bpmn:exclusiveGateway id="Marketplace_GenuineRisk" name="Real risk?">
+      <bpmn:incoming>Flow_RequestInformationFromProducer_To_GenuineRisk</bpmn:incoming>
+      <bpmn:outgoing>Flow_GenuineRisk_To_NoGenuineRisk</bpmn:outgoing>
+    <bpmn:outgoing>Flow_GenuineRisk_To_Suspend</bpmn:outgoing></bpmn:exclusiveGateway>
+    <bpmn:subProcess id="Marketplace_SuspendProductAndNotifyAffectedCustomers" name="Remove product, warn buyers">
+      <bpmn:incoming>Flow_GenuineRisk_To_Suspend</bpmn:incoming><bpmn:outgoing>Flow_SuspendProductAndNotifyAffectedCustomers_To_ReviewIncident</bpmn:outgoing>
+      <bpmn:startEvent id="SuspendProductAndNotifyAffectedCustomers_RiskConfirmed" name="Risk confirmed">
+        <bpmn:outgoing>Flow_RiskConfirmed_To_SuspendProductFromSale</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:task id="SuspendProductAndNotifyAffectedCustomers_SuspendProductFromSale" name="Suspend product from sale">
+        <bpmn:incoming>Flow_RiskConfirmed_To_SuspendProductFromSale</bpmn:incoming>
+        <bpmn:outgoing>Flow_SuspendProductFromSale_To_IdentifyAffectedCustomers</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:task id="SuspendProductAndNotifyAffectedCustomers_IdentifyAffectedCustomers" name="Identify affected customers">
+        <bpmn:incoming>Flow_SuspendProductFromSale_To_IdentifyAffectedCustomers</bpmn:incoming>
+        <bpmn:outgoing>Flow_IdentifyAffectedCustomers_To_SendSafetyNotifications</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:task id="SuspendProductAndNotifyAffectedCustomers_SendSafetyNotifications" name="Send safety notifications">
+        <bpmn:incoming>Flow_IdentifyAffectedCustomers_To_SendSafetyNotifications</bpmn:incoming>
+        <bpmn:outgoing>Flow_SendSafetyNotifications_To_RecordNotificationResults</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:task id="SuspendProductAndNotifyAffectedCustomers_RecordNotificationResults" name="Record notification results">
+        <bpmn:incoming>Flow_SendSafetyNotifications_To_RecordNotificationResults</bpmn:incoming>
+        <bpmn:outgoing>Flow_RecordNotificationResults_To_CustomersNotified</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:endEvent id="SuspendProductAndNotifyAffectedCustomers_CustomersNotified" name="Customers notified">
+        <bpmn:incoming>Flow_RecordNotificationResults_To_CustomersNotified</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="Flow_RiskConfirmed_To_SuspendProductFromSale" sourceRef="SuspendProductAndNotifyAffectedCustomers_RiskConfirmed" targetRef="SuspendProductAndNotifyAffectedCustomers_SuspendProductFromSale" />
+      <bpmn:sequenceFlow id="Flow_SuspendProductFromSale_To_IdentifyAffectedCustomers" sourceRef="SuspendProductAndNotifyAffectedCustomers_SuspendProductFromSale" targetRef="SuspendProductAndNotifyAffectedCustomers_IdentifyAffectedCustomers" />
+      <bpmn:sequenceFlow id="Flow_IdentifyAffectedCustomers_To_SendSafetyNotifications" sourceRef="SuspendProductAndNotifyAffectedCustomers_IdentifyAffectedCustomers" targetRef="SuspendProductAndNotifyAffectedCustomers_SendSafetyNotifications" />
+      <bpmn:sequenceFlow id="Flow_SendSafetyNotifications_To_RecordNotificationResults" sourceRef="SuspendProductAndNotifyAffectedCustomers_SendSafetyNotifications" targetRef="SuspendProductAndNotifyAffectedCustomers_RecordNotificationResults" />
+      <bpmn:sequenceFlow id="Flow_RecordNotificationResults_To_CustomersNotified" sourceRef="SuspendProductAndNotifyAffectedCustomers_RecordNotificationResults" targetRef="SuspendProductAndNotifyAffectedCustomers_CustomersNotified" />
+    </bpmn:subProcess>
+    <bpmn:subProcess id="Marketplace_ReviewIncident" name="Check it's fixed">
+      <bpmn:incoming>Flow_SuspendProductAndNotifyAffectedCustomers_To_ReviewIncident</bpmn:incoming>
+      <bpmn:startEvent id="ReviewIncident_ActionsComplete" name="Actions complete">
+        <bpmn:outgoing>Flow_ActionsComplete_To_CheckAllActionsAreComplete</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:task id="ReviewIncident_CheckAllActionsAreComplete" name="Check all actions are complete">
+        <bpmn:incoming>Flow_ActionsComplete_To_CheckAllActionsAreComplete</bpmn:incoming>
+        <bpmn:outgoing>Flow_CheckAllActionsAreComplete_To_RecordReviewDecision</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:task id="ReviewIncident_RecordReviewDecision" name="Record review decision">
+        <bpmn:incoming>Flow_CheckAllActionsAreComplete_To_RecordReviewDecision</bpmn:incoming>
+        <bpmn:outgoing>Flow_RecordReviewDecision_To_ReviewRecorded</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:endEvent id="ReviewIncident_ReviewRecorded" name="Review recorded">
+        <bpmn:incoming>Flow_RecordReviewDecision_To_ReviewRecorded</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="Flow_ActionsComplete_To_CheckAllActionsAreComplete" sourceRef="ReviewIncident_ActionsComplete" targetRef="ReviewIncident_CheckAllActionsAreComplete" />
+      <bpmn:sequenceFlow id="Flow_CheckAllActionsAreComplete_To_RecordReviewDecision" sourceRef="ReviewIncident_CheckAllActionsAreComplete" targetRef="ReviewIncident_RecordReviewDecision" />
+      <bpmn:sequenceFlow id="Flow_RecordReviewDecision_To_ReviewRecorded" sourceRef="ReviewIncident_RecordReviewDecision" targetRef="ReviewIncident_ReviewRecorded" />
+    <bpmn:outgoing>Flow_ReviewIncident_To_IncidentClosed</bpmn:outgoing></bpmn:subProcess>
+    <bpmn:endEvent id="Marketplace_IncidentClosed" name="Closed">
+      <bpmn:incoming>Flow_ReviewIncident_To_IncidentClosed</bpmn:incoming></bpmn:endEvent>
+    <bpmn:endEvent id="Marketplace_NoGenuineRisk" name="No risk">
+      <bpmn:incoming>Flow_GenuineRisk_To_NoGenuineRisk</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:startEvent id="Marketplace_ProducerApplicationReceived" name="Application received">
+      <bpmn:outgoing>Flow_ProducerApplicationReceived_To_VerifyAndRegisterProducer</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="Marketplace_ProducerApplicationReceived_MessageDefinition" />
+    </bpmn:startEvent>
+    <bpmn:subProcess id="Marketplace_VerifyAndRegisterProducer" name="Check and sign up producer">
+      <bpmn:incoming>Flow_ProducerApplicationReceived_To_VerifyAndRegisterProducer</bpmn:incoming>
+      <bpmn:outgoing>Flow_VerifyAndRegisterProducer_To_ProducerRegistered</bpmn:outgoing>
+      <bpmn:startEvent id="VerifyAndRegisterProducer_ApplicationReceived" name="Application received">
+        <bpmn:outgoing>Flow_ApplicationReceived_To_CheckProducerDetails</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:task id="VerifyAndRegisterProducer_CheckProducerDetails" name="Check producer details">
+        <bpmn:incoming>Flow_ApplicationReceived_To_CheckProducerDetails</bpmn:incoming>
+        <bpmn:outgoing>Flow_CheckProducerDetails_To_CreateProducerAccount</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:task id="VerifyAndRegisterProducer_CreateProducerAccount" name="Create producer account">
+        <bpmn:incoming>Flow_CheckProducerDetails_To_CreateProducerAccount</bpmn:incoming>
+        <bpmn:outgoing>Flow_CreateProducerAccount_To_AccountCreated</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:endEvent id="VerifyAndRegisterProducer_AccountCreated" name="Account created">
+        <bpmn:incoming>Flow_CreateProducerAccount_To_AccountCreated</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="Flow_ApplicationReceived_To_CheckProducerDetails" sourceRef="VerifyAndRegisterProducer_ApplicationReceived" targetRef="VerifyAndRegisterProducer_CheckProducerDetails" />
+      <bpmn:sequenceFlow id="Flow_CheckProducerDetails_To_CreateProducerAccount" sourceRef="VerifyAndRegisterProducer_CheckProducerDetails" targetRef="VerifyAndRegisterProducer_CreateProducerAccount" />
+      <bpmn:sequenceFlow id="Flow_CreateProducerAccount_To_AccountCreated" sourceRef="VerifyAndRegisterProducer_CreateProducerAccount" targetRef="VerifyAndRegisterProducer_AccountCreated" />
+    </bpmn:subProcess>
+    <bpmn:endEvent id="Marketplace_ProducerRegistered" name="Signed up">
+      <bpmn:incoming>Flow_VerifyAndRegisterProducer_To_ProducerRegistered</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:startEvent id="Marketplace_ProductDetailsReceived" name="Product received">
+      <bpmn:outgoing>Flow_ProductDetailsReceived_To_ValidateProductDetails</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="Marketplace_ProductDetailsReceived_MessageDefinition" />
+    </bpmn:startEvent>
+    <bpmn:subProcess id="Marketplace_ValidateProductDetails" name="Check product">
+      <bpmn:incoming>Flow_ProductDetailsReceived_To_ValidateProductDetails</bpmn:incoming>
+      <bpmn:startEvent id="ValidateProductDetails_DetailsReceived" name="Details received">
+        <bpmn:outgoing>Flow_DetailsReceived_To_CheckMandatoryInformation</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:task id="ValidateProductDetails_CheckMandatoryInformation" name="Check mandatory information">
+        <bpmn:incoming>Flow_DetailsReceived_To_CheckMandatoryInformation</bpmn:incoming>
+        <bpmn:outgoing>Flow_CheckMandatoryInformation_To_VerifyOrganicCertificateIfClaimed</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:task id="ValidateProductDetails_VerifyOrganicCertificateIfClaimed" name="Verify organic certificate if claimed">
+        <bpmn:incoming>Flow_CheckMandatoryInformation_To_VerifyOrganicCertificateIfClaimed</bpmn:incoming>
+        <bpmn:outgoing>Flow_VerifyOrganicCertificateIfClaimed_To_ValidationFinished</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:endEvent id="ValidateProductDetails_ValidationFinished" name="Validation finished">
+        <bpmn:incoming>Flow_VerifyOrganicCertificateIfClaimed_To_ValidationFinished</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="Flow_DetailsReceived_To_CheckMandatoryInformation" sourceRef="ValidateProductDetails_DetailsReceived" targetRef="ValidateProductDetails_CheckMandatoryInformation" />
+      <bpmn:sequenceFlow id="Flow_CheckMandatoryInformation_To_VerifyOrganicCertificateIfClaimed" sourceRef="ValidateProductDetails_CheckMandatoryInformation" targetRef="ValidateProductDetails_VerifyOrganicCertificateIfClaimed" />
+      <bpmn:sequenceFlow id="Flow_VerifyOrganicCertificateIfClaimed_To_ValidationFinished" sourceRef="ValidateProductDetails_VerifyOrganicCertificateIfClaimed" targetRef="ValidateProductDetails_ValidationFinished" />
+    <bpmn:outgoing>Flow_ValidateProductDetails_To_DetailsValid</bpmn:outgoing></bpmn:subProcess>
+    <bpmn:exclusiveGateway id="Marketplace_DetailsValid" name="Product OK?">
+      <bpmn:incoming>Flow_ValidateProductDetails_To_DetailsValid</bpmn:incoming><bpmn:outgoing>Flow_DetailsValid_To_PublishProduct</bpmn:outgoing>
+      <bpmn:outgoing>Flow_DetailsValid_To_CorrectionsRequested</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:subProcess id="Marketplace_PublishProduct" name="Put on sale">
+      <bpmn:incoming>Flow_DetailsValid_To_PublishProduct</bpmn:incoming>
+      <bpmn:outgoing>Flow_PublishProduct_To_ProductAvailable</bpmn:outgoing>
+      <bpmn:startEvent id="PublishProduct_DetailsApproved" name="Details approved">
+        <bpmn:outgoing>Flow_DetailsApproved_To_CreateProductListing</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:task id="PublishProduct_CreateProductListing" name="Create product listing">
+        <bpmn:incoming>Flow_DetailsApproved_To_CreateProductListing</bpmn:incoming>
+        <bpmn:outgoing>Flow_CreateProductListing_To_MakeProductVisibleToCustomers</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:task id="PublishProduct_MakeProductVisibleToCustomers" name="Make product visible to customers">
+        <bpmn:incoming>Flow_CreateProductListing_To_MakeProductVisibleToCustomers</bpmn:incoming>
+        <bpmn:outgoing>Flow_MakeProductVisibleToCustomers_To_ListingLive</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:endEvent id="PublishProduct_ListingLive" name="Listing live">
+        <bpmn:incoming>Flow_MakeProductVisibleToCustomers_To_ListingLive</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="Flow_DetailsApproved_To_CreateProductListing" sourceRef="PublishProduct_DetailsApproved" targetRef="PublishProduct_CreateProductListing" />
+      <bpmn:sequenceFlow id="Flow_CreateProductListing_To_MakeProductVisibleToCustomers" sourceRef="PublishProduct_CreateProductListing" targetRef="PublishProduct_MakeProductVisibleToCustomers" />
+      <bpmn:sequenceFlow id="Flow_MakeProductVisibleToCustomers_To_ListingLive" sourceRef="PublishProduct_MakeProductVisibleToCustomers" targetRef="PublishProduct_ListingLive" />
+    </bpmn:subProcess>
+    <bpmn:endEvent id="Marketplace_ProductAvailable" name="On sale">
+      <bpmn:incoming>Flow_PublishProduct_To_ProductAvailable</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="Marketplace_CorrectionsRequested" name="Sent back to fix">
+      <bpmn:incoming>Flow_DetailsValid_To_CorrectionsRequested</bpmn:incoming>
+      <bpmn:messageEventDefinition id="Marketplace_CorrectionsRequested_MessageDefinition" />
+    </bpmn:endEvent>
+    <bpmn:startEvent id="Marketplace_StockUpdateReceived" name="Stock change received">
+      <bpmn:outgoing>Flow_StockUpdateReceived_To_UpdateStockAndAvailability</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="Marketplace_StockUpdateReceived_MessageDefinition" />
+    </bpmn:startEvent>
+    <bpmn:subProcess id="Marketplace_UpdateStockAndAvailability" name="Update stock">
+      <bpmn:incoming>Flow_StockUpdateReceived_To_UpdateStockAndAvailability</bpmn:incoming>
+      <bpmn:outgoing>Flow_UpdateStockAndAvailability_To_AvailabilityUpdated</bpmn:outgoing>
+      <bpmn:startEvent id="UpdateStockAndAvailability_StockLevelReceived" name="Stock level received">
+        <bpmn:outgoing>Flow_StockLevelReceived_To_RecordNewStockLevel</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:task id="UpdateStockAndAvailability_RecordNewStockLevel" name="Record new stock level">
+        <bpmn:incoming>Flow_StockLevelReceived_To_RecordNewStockLevel</bpmn:incoming>
+        <bpmn:outgoing>Flow_RecordNewStockLevel_To_SetAvailabilityFromStockAndSeason</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:task id="UpdateStockAndAvailability_SetAvailabilityFromStockAndSeason" name="Set availability from stock and season">
+        <bpmn:incoming>Flow_RecordNewStockLevel_To_SetAvailabilityFromStockAndSeason</bpmn:incoming>
+        <bpmn:outgoing>Flow_SetAvailabilityFromStockAndSeason_To_AvailabilitySet</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:endEvent id="UpdateStockAndAvailability_AvailabilitySet" name="Availability set">
+        <bpmn:incoming>Flow_SetAvailabilityFromStockAndSeason_To_AvailabilitySet</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="Flow_StockLevelReceived_To_RecordNewStockLevel" sourceRef="UpdateStockAndAvailability_StockLevelReceived" targetRef="UpdateStockAndAvailability_RecordNewStockLevel" />
+      <bpmn:sequenceFlow id="Flow_RecordNewStockLevel_To_SetAvailabilityFromStockAndSeason" sourceRef="UpdateStockAndAvailability_RecordNewStockLevel" targetRef="UpdateStockAndAvailability_SetAvailabilityFromStockAndSeason" />
+      <bpmn:sequenceFlow id="Flow_SetAvailabilityFromStockAndSeason_To_AvailabilitySet" sourceRef="UpdateStockAndAvailability_SetAvailabilityFromStockAndSeason" targetRef="UpdateStockAndAvailability_AvailabilitySet" />
+    </bpmn:subProcess>
+    <bpmn:endEvent id="Marketplace_AvailabilityUpdated" name="Stock updated">
+      <bpmn:incoming>Flow_UpdateStockAndAvailability_To_AvailabilityUpdated</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:startEvent id="Marketplace_EveryWeek" name="Every week"><bpmn:outgoing>Flow_EveryWeek_To_PayProducersWeekly</bpmn:outgoing><bpmn:timerEventDefinition id="Marketplace_EveryWeek_Timer"><bpmn:timeCycle xsi:type="bpmn:tFormalExpression">R/P7D</bpmn:timeCycle></bpmn:timerEventDefinition></bpmn:startEvent><bpmn:subProcess id="Marketplace_PayProducersWeekly" name="Pay producers"><bpmn:documentation>Each week, pays producers what they are owed. The 5% was already taken at checkout, so it is not taken again.</bpmn:documentation><bpmn:outgoing>Flow_PayProducersWeekly_To_ProducersPaid</bpmn:outgoing><bpmn:incoming>Flow_EveryWeek_To_PayProducersWeekly</bpmn:incoming><bpmn:property id="Property_PayProducersWeekly" name="__targetRef_placeholder" /><bpmn:dataInputAssociation id="PayProducersWeekly_Reads_OrderCustomerAndProducerRecords"><bpmn:sourceRef>OrderCustomerAndProducerRecords_Settlement</bpmn:sourceRef><bpmn:targetRef>Property_PayProducersWeekly</bpmn:targetRef></bpmn:dataInputAssociation><bpmn:startEvent id="PayProducers_WeekEnded" name="Week ended"><bpmn:outgoing>Flow_PayProducers_WeekEnded_To_PayProducers_AddUpAmounts</bpmn:outgoing></bpmn:startEvent><bpmn:task id="PayProducers_AddUpAmounts" name="Add up what each producer is owed"><bpmn:outgoing>Flow_PayProducers_AddUpAmounts_To_PayProducers_SendPayments</bpmn:outgoing><bpmn:incoming>Flow_PayProducers_WeekEnded_To_PayProducers_AddUpAmounts</bpmn:incoming></bpmn:task><bpmn:task id="PayProducers_SendPayments" name="Send payments through payment service"><bpmn:outgoing>Flow_PayProducers_SendPayments_To_PayProducers_RecordStatement</bpmn:outgoing><bpmn:incoming>Flow_PayProducers_AddUpAmounts_To_PayProducers_SendPayments</bpmn:incoming></bpmn:task><bpmn:task id="PayProducers_RecordStatement" name="Record payment statement"><bpmn:outgoing>Flow_PayProducers_RecordStatement_To_PayProducers_Done</bpmn:outgoing><bpmn:incoming>Flow_PayProducers_SendPayments_To_PayProducers_RecordStatement</bpmn:incoming></bpmn:task><bpmn:endEvent id="PayProducers_Done" name="Producers paid"><bpmn:incoming>Flow_PayProducers_RecordStatement_To_PayProducers_Done</bpmn:incoming></bpmn:endEvent><bpmn:sequenceFlow id="Flow_PayProducers_WeekEnded_To_PayProducers_AddUpAmounts" sourceRef="PayProducers_WeekEnded" targetRef="PayProducers_AddUpAmounts" /><bpmn:sequenceFlow id="Flow_PayProducers_AddUpAmounts_To_PayProducers_SendPayments" sourceRef="PayProducers_AddUpAmounts" targetRef="PayProducers_SendPayments" /><bpmn:sequenceFlow id="Flow_PayProducers_SendPayments_To_PayProducers_RecordStatement" sourceRef="PayProducers_SendPayments" targetRef="PayProducers_RecordStatement" /><bpmn:sequenceFlow id="Flow_PayProducers_RecordStatement_To_PayProducers_Done" sourceRef="PayProducers_RecordStatement" targetRef="PayProducers_Done" /></bpmn:subProcess><bpmn:endEvent id="Marketplace_ProducersPaid" name="Producers paid"><bpmn:incoming>Flow_PayProducersWeekly_To_ProducersPaid</bpmn:incoming></bpmn:endEvent><bpmn:dataStoreReference id="OrderCustomerAndProducerRecords_Settlement" name="Orders" dataStoreRef="DataStore_Orders" /><bpmn:startEvent id="Marketplace_OfferOrRecipeReceived" name="Offer received"><bpmn:outgoing>Flow_OfferOrRecipeReceived_To_ShareOffersAndRecipes</bpmn:outgoing><bpmn:messageEventDefinition id="Marketplace_OfferOrRecipeReceived_Msg" /></bpmn:startEvent><bpmn:task id="Marketplace_ShareOffersAndRecipes" name="Share offers &amp; recipes"><bpmn:outgoing>Flow_ShareOffersAndRecipes_To_CustomersInformed</bpmn:outgoing><bpmn:incoming>Flow_OfferOrRecipeReceived_To_ShareOffersAndRecipes</bpmn:incoming></bpmn:task><bpmn:endEvent id="Marketplace_CustomersInformed" name="Customers told"><bpmn:incoming>Flow_ShareOffersAndRecipes_To_CustomersInformed</bpmn:incoming></bpmn:endEvent><bpmn:sequenceFlow id="Flow_CustomerStartsShopping_To_FindProducts" sourceRef="Marketplace_CustomerStartsShopping" targetRef="Marketplace_FindProducts" />
+    <bpmn:sequenceFlow id="Flow_FindProducts_To_CheckoutAndStockValidation" sourceRef="Marketplace_FindProducts" targetRef="Marketplace_CheckoutAndStockValidation" />
+    <bpmn:sequenceFlow id="Flow_CheckoutAndStockValidation_To_PaymentAndOrderProcessing" sourceRef="Marketplace_CheckoutAndStockValidation" targetRef="Marketplace_PaymentAndOrderProcessing" />
+    <bpmn:sequenceFlow id="Flow_PaymentAndOrderProcessing_To_CoordinateDeliveryOrCollection" sourceRef="Marketplace_PaymentAndOrderProcessing" targetRef="Marketplace_CoordinateDeliveryOrCollection" />
+    <bpmn:sequenceFlow id="Flow_CoordinateDeliveryOrCollection_To_OrderComplete" sourceRef="Marketplace_CoordinateDeliveryOrCollection" targetRef="Marketplace_OrderComplete" />
+    <bpmn:sequenceFlow id="Flow_CheckoutCancelledOrTimedOut_To_CheckoutAbandoned" sourceRef="Marketplace_CheckoutCancelledOrTimedOut" targetRef="Marketplace_CheckoutAbandoned" />
+    <bpmn:sequenceFlow id="Flow_PaymentFailedAfterRetries_To_OrderNotPlaced" sourceRef="Marketplace_PaymentFailedAfterRetries" targetRef="Marketplace_OrderNotPlaced" />
+    <bpmn:sequenceFlow id="Flow_FoodProblemReported_To_RecordIncidentAndIdentifyProduct" sourceRef="Marketplace_FoodProblemReported" targetRef="Marketplace_RecordIncidentAndIdentifyProduct" />
+    <bpmn:sequenceFlow id="Flow_RecordIncidentAndIdentifyProduct_To_RequestInformationFromProducer" sourceRef="Marketplace_RecordIncidentAndIdentifyProduct" targetRef="Marketplace_RequestInformationFromProducer" />
+    <bpmn:sequenceFlow id="Flow_RequestInformationFromProducer_To_GenuineRisk" sourceRef="Marketplace_RequestInformationFromProducer" targetRef="Marketplace_GenuineRisk" />
+    <bpmn:sequenceFlow id="Flow_SuspendProductAndNotifyAffectedCustomers_To_ReviewIncident" sourceRef="Marketplace_SuspendProductAndNotifyAffectedCustomers" targetRef="Marketplace_ReviewIncident" />
+    <bpmn:sequenceFlow id="Flow_GenuineRisk_To_NoGenuineRisk" name="No" sourceRef="Marketplace_GenuineRisk" targetRef="Marketplace_NoGenuineRisk" />
+    <bpmn:sequenceFlow id="Flow_ProducerApplicationReceived_To_VerifyAndRegisterProducer" sourceRef="Marketplace_ProducerApplicationReceived" targetRef="Marketplace_VerifyAndRegisterProducer" />
+    <bpmn:sequenceFlow id="Flow_VerifyAndRegisterProducer_To_ProducerRegistered" sourceRef="Marketplace_VerifyAndRegisterProducer" targetRef="Marketplace_ProducerRegistered" />
+    <bpmn:sequenceFlow id="Flow_ProductDetailsReceived_To_ValidateProductDetails" sourceRef="Marketplace_ProductDetailsReceived" targetRef="Marketplace_ValidateProductDetails" />
+    <bpmn:sequenceFlow id="Flow_DetailsValid_To_PublishProduct" name="Yes" sourceRef="Marketplace_DetailsValid" targetRef="Marketplace_PublishProduct" />
+    <bpmn:sequenceFlow id="Flow_PublishProduct_To_ProductAvailable" sourceRef="Marketplace_PublishProduct" targetRef="Marketplace_ProductAvailable" />
+    <bpmn:sequenceFlow id="Flow_DetailsValid_To_CorrectionsRequested" name="No" sourceRef="Marketplace_DetailsValid" targetRef="Marketplace_CorrectionsRequested" />
+    <bpmn:sequenceFlow id="Flow_StockUpdateReceived_To_UpdateStockAndAvailability" sourceRef="Marketplace_StockUpdateReceived" targetRef="Marketplace_UpdateStockAndAvailability" />
+    <bpmn:sequenceFlow id="Flow_UpdateStockAndAvailability_To_AvailabilityUpdated" sourceRef="Marketplace_UpdateStockAndAvailability" targetRef="Marketplace_AvailabilityUpdated" />
+    <bpmn:dataStoreReference id="ProductAndStockRecords_Checkout" name="Products" dataStoreRef="DataStore_Products" />
+    <bpmn:dataStoreReference id="OrderCustomerAndProducerRecords_OrderProcessing" name="Orders" dataStoreRef="DataStore_Orders" />
+    <bpmn:dataStoreReference id="ProductAndStockRecords_OrderProcessing" name="Products" dataStoreRef="DataStore_Products" />
+    <bpmn:sequenceFlow id="Flow_EveryWeek_To_PayProducersWeekly" sourceRef="Marketplace_EveryWeek" targetRef="Marketplace_PayProducersWeekly" /><bpmn:sequenceFlow id="Flow_PayProducersWeekly_To_ProducersPaid" sourceRef="Marketplace_PayProducersWeekly" targetRef="Marketplace_ProducersPaid" /><bpmn:sequenceFlow id="Flow_OfferOrRecipeReceived_To_ShareOffersAndRecipes" sourceRef="Marketplace_OfferOrRecipeReceived" targetRef="Marketplace_ShareOffersAndRecipes" /><bpmn:sequenceFlow id="Flow_ShareOffersAndRecipes_To_CustomersInformed" sourceRef="Marketplace_ShareOffersAndRecipes" targetRef="Marketplace_CustomersInformed" /><bpmn:sequenceFlow id="Flow_GenuineRisk_To_Suspend" sourceRef="Marketplace_GenuineRisk" targetRef="Marketplace_SuspendProductAndNotifyAffectedCustomers" name="Yes" /><bpmn:sequenceFlow id="Flow_ReviewIncident_To_IncidentClosed" sourceRef="Marketplace_ReviewIncident" targetRef="Marketplace_IncidentClosed" /><bpmn:sequenceFlow id="Flow_ValidateProductDetails_To_DetailsValid" sourceRef="Marketplace_ValidateProductDetails" targetRef="Marketplace_DetailsValid" /></bpmn:process>
+  <bpmn:process id="Process_Producer" name="Registered Producer" isExecutable="false">
+    <bpmn:startEvent id="Producer_ProducerOrderReceived" name="New order">
+      <bpmn:outgoing>Flow_ProducerOrderReceived_To_PrepareOrderItems</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="Producer_ProducerOrderReceived_MessageDefinition" />
+    </bpmn:startEvent>
+    <bpmn:task id="Producer_PrepareOrderItems" name="Prepare order">
+      <bpmn:incoming>Flow_ProducerOrderReceived_To_PrepareOrderItems</bpmn:incoming>
+      <bpmn:outgoing>Flow_PrepareOrderItems_To_OrderReady</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="Producer_OrderReady" name="Ready">
+      <bpmn:incoming>Flow_PrepareOrderItems_To_OrderReady</bpmn:incoming>
+      <bpmn:messageEventDefinition id="Producer_OrderReady_MessageDefinition" />
+    </bpmn:endEvent>
+    <bpmn:startEvent id="Producer_WantsToListAProduct" name="New product">
+      <bpmn:outgoing>Flow_WantsToListAProduct_To_SubmitProductDetails</bpmn:outgoing>
+      <bpmn:conditionalEventDefinition id="Producer_WantsToListAProduct_ConditionDefinition"><bpmn:condition xsi:type="bpmn:tFormalExpression" /></bpmn:conditionalEventDefinition>
+    </bpmn:startEvent>
+    <bpmn:task id="Producer_SubmitProductDetails" name="Send product details">
+      <bpmn:incoming>Flow_WantsToListAProduct_To_SubmitProductDetails</bpmn:incoming>
+      <bpmn:outgoing>Flow_SubmitProductDetails_To_ListingSubmitted</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="Producer_ListingSubmitted" name="Details sent">
+      <bpmn:incoming>Flow_SubmitProductDetails_To_ListingSubmitted</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:startEvent id="Producer_StockLevelChanges" name="Stock changes">
+      <bpmn:outgoing>Flow_StockLevelChanges_To_UpdateStockLevels</bpmn:outgoing>
+      <bpmn:conditionalEventDefinition id="Producer_StockLevelChanges_ConditionDefinition"><bpmn:condition xsi:type="bpmn:tFormalExpression" /></bpmn:conditionalEventDefinition>
+    </bpmn:startEvent>
+    <bpmn:task id="Producer_UpdateStockLevels" name="Update stock">
+      <bpmn:incoming>Flow_StockLevelChanges_To_UpdateStockLevels</bpmn:incoming>
+      <bpmn:outgoing>Flow_UpdateStockLevels_To_StockUpdated</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="Producer_StockUpdated" name="Stock sent">
+      <bpmn:incoming>Flow_UpdateStockLevels_To_StockUpdated</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:startEvent id="Producer_WantsToSellFood" name="Wants to sell">
+      <bpmn:outgoing>Flow_WantsToSellFood_To_ApplyToSell</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="Producer_ApplyToSell" name="Apply to sell">
+      <bpmn:incoming>Flow_WantsToSellFood_To_ApplyToSell</bpmn:incoming>
+      <bpmn:outgoing>Flow_ApplyToSell_To_ApplicationSent</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="Producer_ApplicationSent" name="Applied">
+      <bpmn:incoming>Flow_ApplyToSell_To_ApplicationSent</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:startEvent id="Producer_FindsAQualityProblem" name="Finds a problem">
+      <bpmn:outgoing>Flow_FindsAQualityProblem_To_ReportProblem</bpmn:outgoing>
+      <bpmn:conditionalEventDefinition id="Producer_FindsAQualityProblem_ConditionDefinition"><bpmn:condition xsi:type="bpmn:tFormalExpression" /></bpmn:conditionalEventDefinition>
+    </bpmn:startEvent>
+    <bpmn:task id="Producer_ReportProblem" name="Report problem">
+      <bpmn:incoming>Flow_FindsAQualityProblem_To_ReportProblem</bpmn:incoming>
+      <bpmn:outgoing>Flow_ReportProblem_To_ProblemReported2</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="Producer_ProblemReported" name="Problem reported">
+      <bpmn:incoming>Flow_ReportProblem_To_ProblemReported2</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:startEvent id="Producer_InformationRequested" name="Asked a question">
+      <bpmn:outgoing>Flow_InformationRequested_To_ProvideProductInformation</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="Producer_InformationRequested_MessageDefinition" />
+    </bpmn:startEvent>
+    <bpmn:task id="Producer_ProvideProductInformation" name="Send answer">
+      <bpmn:incoming>Flow_InformationRequested_To_ProvideProductInformation</bpmn:incoming>
+      <bpmn:outgoing>Flow_ProvideProductInformation_To_InformationSent</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="Producer_InformationSent" name="Answered">
+      <bpmn:incoming>Flow_ProvideProductInformation_To_InformationSent</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_ProducerOrderReceived_To_PrepareOrderItems" sourceRef="Producer_ProducerOrderReceived" targetRef="Producer_PrepareOrderItems" />
+    <bpmn:sequenceFlow id="Flow_PrepareOrderItems_To_OrderReady" sourceRef="Producer_PrepareOrderItems" targetRef="Producer_OrderReady" />
+    <bpmn:sequenceFlow id="Flow_WantsToListAProduct_To_SubmitProductDetails" sourceRef="Producer_WantsToListAProduct" targetRef="Producer_SubmitProductDetails" />
+    <bpmn:sequenceFlow id="Flow_SubmitProductDetails_To_ListingSubmitted" sourceRef="Producer_SubmitProductDetails" targetRef="Producer_ListingSubmitted" />
+    <bpmn:sequenceFlow id="Flow_StockLevelChanges_To_UpdateStockLevels" sourceRef="Producer_StockLevelChanges" targetRef="Producer_UpdateStockLevels" />
+    <bpmn:sequenceFlow id="Flow_UpdateStockLevels_To_StockUpdated" sourceRef="Producer_UpdateStockLevels" targetRef="Producer_StockUpdated" />
+    <bpmn:sequenceFlow id="Flow_WantsToSellFood_To_ApplyToSell" sourceRef="Producer_WantsToSellFood" targetRef="Producer_ApplyToSell" />
+    <bpmn:sequenceFlow id="Flow_ApplyToSell_To_ApplicationSent" sourceRef="Producer_ApplyToSell" targetRef="Producer_ApplicationSent" />
+    <bpmn:sequenceFlow id="Flow_FindsAQualityProblem_To_ReportProblem" sourceRef="Producer_FindsAQualityProblem" targetRef="Producer_ReportProblem" />
+    <bpmn:sequenceFlow id="Flow_ReportProblem_To_ProblemReported2" sourceRef="Producer_ReportProblem" targetRef="Producer_ProblemReported" />
+    <bpmn:sequenceFlow id="Flow_InformationRequested_To_ProvideProductInformation" sourceRef="Producer_InformationRequested" targetRef="Producer_ProvideProductInformation" />
+    <bpmn:sequenceFlow id="Flow_ProvideProductInformation_To_InformationSent" sourceRef="Producer_ProvideProductInformation" targetRef="Producer_InformationSent" />
+  <bpmn:textAnnotation id="Note_LeadTime"><bpmn:text>Producers get at least 48 hours' notice</bpmn:text></bpmn:textAnnotation><bpmn:association id="Note_LeadTime_Link" associationDirection="None" sourceRef="Note_LeadTime" targetRef="Producer_PrepareOrderItems" /></bpmn:process>
+  <bpmn:dataStore id="DataStore_Products" name="Product &amp; stock records" />
+  <bpmn:dataStore id="DataStore_Orders" name="Order, customer &amp; producer records" />
+  <bpmn:error id="Error_CheckoutCancelled" name="Checkout cancelled" errorCode="CHECKOUT_CANCELLED" />
+  <bpmn:error id="Error_PaymentFailed" name="Payment failed" errorCode="PAYMENT_FAILED" />
+  <bpmn:error id="Error_VerificationUnavailable" name="Verification service unavailable" errorCode="VERIFICATION_UNAVAILABLE" />
+  <bpmn:escalation id="Escalation_NotificationFailed" name="Notification failed" escalationCode="NOTIFICATION_FAILED" />
+  <bpmndi:BPMNDiagram id="BPMNDiagram_Overview">
+    <bpmndi:BPMNPlane id="BPMNPlane_Overview" bpmnElement="Collaboration_Overview">
+      <bpmndi:BPMNShape id="Participant_Customer_di" bpmnElement="Participant_Customer" isHorizontal="true"><dc:Bounds x="150" y="80" width="4550" height="200" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Participant_Payment_di" bpmnElement="Participant_Payment" isHorizontal="true"><dc:Bounds x="1060" y="320" width="160" height="60" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Participant_Marketplace_di" bpmnElement="Participant_Marketplace" isHorizontal="true"><dc:Bounds x="150" y="470" width="4550" height="1010" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Participant_Cert_di" bpmnElement="Participant_Cert" isHorizontal="true"><dc:Bounds x="1780" y="1550" width="280" height="60" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Participant_Producer_di" bpmnElement="Participant_Producer" isHorizontal="true"><dc:Bounds x="150" y="1700" width="4550" height="260" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Orders_di" bpmnElement="Lane_Orders" isHorizontal="true"><dc:Bounds x="180" y="470" width="4520" height="330" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Staff_di" bpmnElement="Lane_Staff" isHorizontal="true"><dc:Bounds x="180" y="800" width="4520" height="300" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Products_di" bpmnElement="Lane_Products" isHorizontal="true"><dc:Bounds x="180" y="1100" width="4520" height="380" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Customer_WantsToBuyLocalFood_di" bpmnElement="Customer_WantsToBuyLocalFood" bioc:stroke="#0d4372" bioc:fill="#bbdefb" color:background-color="#bbdefb" color:border-color="#0d4372"><dc:Bounds x="207" y="162" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="180" y="202" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Customer_BrowseProductsAndFillBasket_di" bpmnElement="Customer_BrowseProductsAndFillBasket" bioc:stroke="#0d4372" bioc:fill="#bbdefb" color:background-color="#bbdefb" color:border-color="#0d4372"><dc:Bounds x="280" y="140" width="140" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Customer_ProceedToCheckout_di" bpmnElement="Customer_ProceedToCheckout" bioc:stroke="#0d4372" bioc:fill="#bbdefb" color:background-color="#bbdefb" color:border-color="#0d4372"><dc:Bounds x="470" y="140" width="140" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Customer_ReviewOrderAmendBasketIfNeededConfirm_di" bpmnElement="Customer_ReviewOrderAmendBasketIfNeededConfirm" bioc:stroke="#0d4372" bioc:fill="#bbdefb" color:background-color="#bbdefb" color:border-color="#0d4372"><dc:Bounds x="640" y="140" width="95" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Customer_EnterPaymentDetails_di" bpmnElement="Customer_EnterPaymentDetails" bioc:stroke="#0d4372" bioc:fill="#bbdefb" color:background-color="#bbdefb" color:border-color="#0d4372"><dc:Bounds x="820" y="140" width="120" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Customer_OrderConfirmationReceived_di" bpmnElement="Customer_OrderConfirmationReceived" bioc:stroke="#0d4372" bioc:fill="#bbdefb" color:background-color="#bbdefb" color:border-color="#0d4372"><dc:Bounds x="1010" y="162" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="983" y="128" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Customer_ReceiveDeliveryOrCollectOrder_di" bpmnElement="Customer_ReceiveDeliveryOrCollectOrder" bioc:stroke="#0d4372" bioc:fill="#bbdefb" color:background-color="#bbdefb" color:border-color="#0d4372"><dc:Bounds x="1220" y="140" width="140" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Customer_OrderReceived_di" bpmnElement="Customer_OrderReceived" bioc:stroke="#0d4372" bioc:fill="#bbdefb" color:background-color="#bbdefb" color:border-color="#0d4372"><dc:Bounds x="1410" y="162" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="1383" y="202" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Customer_FindsAFoodProblem_di" bpmnElement="Customer_FindsAFoodProblem"><dc:Bounds x="3200" y="162" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="3173" y="202" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Customer_ReportProblem_di" bpmnElement="Customer_ReportProblem"><dc:Bounds x="3268" y="140" width="140" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Customer_ProblemReported_di" bpmnElement="Customer_ProblemReported"><dc:Bounds x="3450" y="162" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="3423" y="202" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Customer_SafetyNoticeReceived_di" bpmnElement="Customer_SafetyNoticeReceived"><dc:Bounds x="4022" y="162" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="3995" y="128" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Customer_FollowSafetyAdvice_di" bpmnElement="Customer_FollowSafetyAdvice"><dc:Bounds x="4090" y="140" width="140" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Customer_CustomerInformed_di" bpmnElement="Customer_CustomerInformed"><dc:Bounds x="4280" y="162" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="4253" y="202" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Marketplace_CustomerStartsShopping_di" bpmnElement="Marketplace_CustomerStartsShopping" bioc:stroke="#0d4372" bioc:fill="#bbdefb" color:background-color="#bbdefb" color:border-color="#0d4372"><dc:Bounds x="290" y="542" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="240" y="582" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Marketplace_FindProducts_di" bpmnElement="Marketplace_FindProducts" isExpanded="false" bioc:stroke="#0d4372" bioc:fill="#bbdefb" color:background-color="#bbdefb" color:border-color="#0d4372"><dc:Bounds x="350" y="520" width="130" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Marketplace_CheckoutAndStockValidation_di" bpmnElement="Marketplace_CheckoutAndStockValidation" isExpanded="false" bioc:stroke="#0d4372" bioc:fill="#bbdefb" color:background-color="#bbdefb" color:border-color="#0d4372"><dc:Bounds x="520" y="520" width="170" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Marketplace_PaymentAndOrderProcessing_di" bpmnElement="Marketplace_PaymentAndOrderProcessing" isExpanded="false" bioc:stroke="#0d4372" bioc:fill="#bbdefb" color:background-color="#bbdefb" color:border-color="#0d4372"><dc:Bounds x="760" y="520" width="390" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Marketplace_CoordinateDeliveryOrCollection_di" bpmnElement="Marketplace_CoordinateDeliveryOrCollection" isExpanded="false" bioc:stroke="#0d4372" bioc:fill="#bbdefb" color:background-color="#bbdefb" color:border-color="#0d4372"><dc:Bounds x="1230" y="520" width="160" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Marketplace_OrderComplete_di" bpmnElement="Marketplace_OrderComplete" bioc:stroke="#0d4372" bioc:fill="#bbdefb" color:background-color="#bbdefb" color:border-color="#0d4372"><dc:Bounds x="1460" y="542" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="1433" y="582" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Marketplace_CheckoutCancelledOrTimedOut_di" bpmnElement="Marketplace_CheckoutCancelledOrTimedOut" bioc:stroke="#0d4372" bioc:fill="#bbdefb" color:background-color="#bbdefb" color:border-color="#0d4372"><dc:Bounds x="637" y="582" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="545" y="622" width="85" height="40" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Marketplace_CheckoutAbandoned_di" bpmnElement="Marketplace_CheckoutAbandoned" bioc:stroke="#0d4372" bioc:fill="#bbdefb" color:background-color="#bbdefb" color:border-color="#0d4372"><dc:Bounds x="637" y="682" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="610" y="722" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Marketplace_PaymentFailedAfterRetries_di" bpmnElement="Marketplace_PaymentFailedAfterRetries" bioc:stroke="#0d4372" bioc:fill="#bbdefb" color:background-color="#bbdefb" color:border-color="#0d4372"><dc:Bounds x="782" y="582" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="688" y="622" width="95" height="40" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Marketplace_OrderNotPlaced_di" bpmnElement="Marketplace_OrderNotPlaced" bioc:stroke="#0d4372" bioc:fill="#bbdefb" color:background-color="#bbdefb" color:border-color="#0d4372"><dc:Bounds x="782" y="682" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="755" y="722" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Marketplace_FoodProblemReported_di" bpmnElement="Marketplace_FoodProblemReported"><dc:Bounds x="3320" y="872" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="3230" y="915" width="85" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Marketplace_RecordIncidentAndIdentifyProduct_di" bpmnElement="Marketplace_RecordIncidentAndIdentifyProduct" isExpanded="false"><dc:Bounds x="3400" y="850" width="150" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Marketplace_RequestInformationFromProducer_di" bpmnElement="Marketplace_RequestInformationFromProducer" isExpanded="false"><dc:Bounds x="3610" y="850" width="150" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Marketplace_GenuineRisk_di" bpmnElement="Marketplace_GenuineRisk"><dc:Bounds x="3820" y="865" width="50" height="50" /><bpmndi:BPMNLabel><dc:Bounds x="3795" y="833" width="100" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Marketplace_SuspendProductAndNotifyAffectedCustomers_di" bpmnElement="Marketplace_SuspendProductAndNotifyAffectedCustomers" isExpanded="false"><dc:Bounds x="4010" y="850" width="170" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Marketplace_ReviewIncident_di" bpmnElement="Marketplace_ReviewIncident" isExpanded="false"><dc:Bounds x="4250" y="850" width="150" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Marketplace_IncidentClosed_di" bpmnElement="Marketplace_IncidentClosed"><dc:Bounds x="4460" y="872" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="4433" y="912" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Marketplace_NoGenuineRisk_di" bpmnElement="Marketplace_NoGenuineRisk"><dc:Bounds x="3827" y="1012" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="3800" y="1052" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Marketplace_ProducerApplicationReceived_di" bpmnElement="Marketplace_ProducerApplicationReceived"><dc:Bounds x="342" y="1012" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="315" y="963" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Marketplace_VerifyAndRegisterProducer_di" bpmnElement="Marketplace_VerifyAndRegisterProducer" isExpanded="false"><dc:Bounds x="412" y="990" width="150" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Marketplace_ProducerRegistered_di" bpmnElement="Marketplace_ProducerRegistered"><dc:Bounds x="592" y="1012" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="565" y="1052" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Marketplace_ProductDetailsReceived_di" bpmnElement="Marketplace_ProductDetailsReceived"><dc:Bounds x="1720" y="1262" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="1693" y="1225" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Marketplace_ValidateProductDetails_di" bpmnElement="Marketplace_ValidateProductDetails" isExpanded="false"><dc:Bounds x="1800" y="1240" width="160" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Marketplace_DetailsValid_di" bpmnElement="Marketplace_DetailsValid"><dc:Bounds x="2110" y="1255" width="50" height="50" /><bpmndi:BPMNLabel><dc:Bounds x="2050" y="1308" width="75" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Marketplace_PublishProduct_di" bpmnElement="Marketplace_PublishProduct" isExpanded="false"><dc:Bounds x="2230" y="1240" width="150" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Marketplace_ProductAvailable_di" bpmnElement="Marketplace_ProductAvailable"><dc:Bounds x="2450" y="1262" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="2423" y="1302" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Marketplace_CorrectionsRequested_di" bpmnElement="Marketplace_CorrectionsRequested"><dc:Bounds x="2220" y="1392" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="2260" y="1430" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Marketplace_StockUpdateReceived_di" bpmnElement="Marketplace_StockUpdateReceived"><dc:Bounds x="2420" y="1392" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="2393" y="1355" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Marketplace_UpdateStockAndAvailability_di" bpmnElement="Marketplace_UpdateStockAndAvailability" isExpanded="false"><dc:Bounds x="2500" y="1370" width="160" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Marketplace_AvailabilityUpdated_di" bpmnElement="Marketplace_AvailabilityUpdated"><dc:Bounds x="2730" y="1392" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="2703" y="1432" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Producer_ProducerOrderReceived_di" bpmnElement="Producer_ProducerOrderReceived" bioc:stroke="#0d4372" bioc:fill="#bbdefb" color:background-color="#bbdefb" color:border-color="#0d4372"><dc:Bounds x="922" y="1762" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="895" y="1802" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Producer_PrepareOrderItems_di" bpmnElement="Producer_PrepareOrderItems" bioc:stroke="#0d4372" bioc:fill="#bbdefb" color:background-color="#bbdefb" color:border-color="#0d4372"><dc:Bounds x="1020" y="1740" width="140" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Producer_OrderReady_di" bpmnElement="Producer_OrderReady" bioc:stroke="#0d4372" bioc:fill="#bbdefb" color:background-color="#bbdefb" color:border-color="#0d4372"><dc:Bounds x="1262" y="1762" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="1235" y="1802" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Producer_WantsToListAProduct_di" bpmnElement="Producer_WantsToListAProduct"><dc:Bounds x="1600" y="1762" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="1573" y="1802" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Producer_SubmitProductDetails_di" bpmnElement="Producer_SubmitProductDetails"><dc:Bounds x="1668" y="1740" width="140" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Producer_ListingSubmitted_di" bpmnElement="Producer_ListingSubmitted"><dc:Bounds x="1860" y="1762" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="1833" y="1802" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Producer_StockLevelChanges_di" bpmnElement="Producer_StockLevelChanges"><dc:Bounds x="2300" y="1872" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="2273" y="1912" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Producer_UpdateStockLevels_di" bpmnElement="Producer_UpdateStockLevels"><dc:Bounds x="2368" y="1850" width="140" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Producer_StockUpdated_di" bpmnElement="Producer_StockUpdated"><dc:Bounds x="2560" y="1872" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="2533" y="1912" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Producer_WantsToSellFood_di" bpmnElement="Producer_WantsToSellFood"><dc:Bounds x="222" y="1872" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="195" y="1912" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Producer_ApplyToSell_di" bpmnElement="Producer_ApplyToSell"><dc:Bounds x="290" y="1850" width="140" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Producer_ApplicationSent_di" bpmnElement="Producer_ApplicationSent"><dc:Bounds x="472" y="1872" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="445" y="1912" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Producer_FindsAQualityProblem_di" bpmnElement="Producer_FindsAQualityProblem"><dc:Bounds x="3200" y="1762" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="3173" y="1802" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Producer_ReportProblem_di" bpmnElement="Producer_ReportProblem"><dc:Bounds x="3268" y="1740" width="140" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Producer_ProblemReported_di" bpmnElement="Producer_ProblemReported"><dc:Bounds x="3450" y="1762" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="3423" y="1802" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Producer_InformationRequested_di" bpmnElement="Producer_InformationRequested"><dc:Bounds x="3632" y="1762" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="3605" y="1802" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Producer_ProvideProductInformation_di" bpmnElement="Producer_ProvideProductInformation"><dc:Bounds x="3700" y="1740" width="140" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Producer_InformationSent_di" bpmnElement="Producer_InformationSent"><dc:Bounds x="3890" y="1762" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="3863" y="1802" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ProductAndStockRecords_Checkout_di" bpmnElement="ProductAndStockRecords_Checkout"><dc:Bounds x="380" y="675" width="50" height="50" /><bpmndi:BPMNLabel><dc:Bounds x="355" y="730" width="100" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="OrderCustomerAndProducerRecords_OrderProcessing_di" bpmnElement="OrderCustomerAndProducerRecords_OrderProcessing"><dc:Bounds x="1030" y="675" width="50" height="50" /><bpmndi:BPMNLabel><dc:Bounds x="1005" y="730" width="100" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ProductAndStockRecords_OrderProcessing_di" bpmnElement="ProductAndStockRecords_OrderProcessing"><dc:Bounds x="1130" y="675" width="50" height="50" /><bpmndi:BPMNLabel><dc:Bounds x="1105" y="730" width="100" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Note_Overview_di" bpmnElement="Note_Overview"><dc:Bounds x="150" y="-150" width="900" height="70" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_WantsToBuyLocalFood_To_BrowseProductsAndFillBasket_di" bpmnElement="Flow_WantsToBuyLocalFood_To_BrowseProductsAndFillBasket"><di:waypoint x="243" y="180" /><di:waypoint x="280" y="180" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_BrowseProductsAndFillBasket_To_ProceedToCheckout_di" bpmnElement="Flow_BrowseProductsAndFillBasket_To_ProceedToCheckout"><di:waypoint x="420" y="180" /><di:waypoint x="470" y="180" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ProceedToCheckout_To_ReviewOrderAmendBasketIfNeededConfirm_di" bpmnElement="Flow_ProceedToCheckout_To_ReviewOrderAmendBasketIfNeededConfirm"><di:waypoint x="610" y="180" /><di:waypoint x="640" y="180" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ReviewOrderAmendBasketIfNeededConfirm_To_EnterPaymentDetails_di" bpmnElement="Flow_ReviewOrderAmendBasketIfNeededConfirm_To_EnterPaymentDetails"><di:waypoint x="735" y="180" /><di:waypoint x="748" y="180" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_EnterPaymentDetails_To_OrderConfirmationReceived_di" bpmnElement="Flow_EnterPaymentDetails_To_OrderConfirmationReceived"><di:waypoint x="940" y="180" /><di:waypoint x="1010" y="180" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_OrderConfirmationReceived_To_ReceiveDeliveryOrCollectOrder_di" bpmnElement="Flow_OrderConfirmationReceived_To_ReceiveDeliveryOrCollectOrder"><di:waypoint x="1046" y="180" /><di:waypoint x="1080" y="180" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ReceiveDeliveryOrCollectOrder_To_OrderReceived_di" bpmnElement="Flow_ReceiveDeliveryOrCollectOrder_To_OrderReceived"><di:waypoint x="1360" y="180" /><di:waypoint x="1410" y="180" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_FindsAFoodProblem_To_ReportProblem_di" bpmnElement="Flow_FindsAFoodProblem_To_ReportProblem"><di:waypoint x="3236" y="180" /><di:waypoint x="3268" y="180" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ReportProblem_To_ProblemReported_di" bpmnElement="Flow_ReportProblem_To_ProblemReported"><di:waypoint x="3408" y="180" /><di:waypoint x="3450" y="180" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_SafetyNoticeReceived_To_FollowSafetyAdvice_di" bpmnElement="Flow_SafetyNoticeReceived_To_FollowSafetyAdvice"><di:waypoint x="4058" y="180" /><di:waypoint x="4090" y="180" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_FollowSafetyAdvice_To_CustomerInformed_di" bpmnElement="Flow_FollowSafetyAdvice_To_CustomerInformed"><di:waypoint x="4230" y="180" /><di:waypoint x="4280" y="180" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_CustomerStartsShopping_To_FindProducts_di" bpmnElement="Flow_CustomerStartsShopping_To_FindProducts"><di:waypoint x="326" y="560" /><di:waypoint x="350" y="560" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_FindProducts_To_CheckoutAndStockValidation_di" bpmnElement="Flow_FindProducts_To_CheckoutAndStockValidation"><di:waypoint x="460" y="560" /><di:waypoint x="520" y="560" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_CheckoutAndStockValidation_To_PaymentAndOrderProcessing_di" bpmnElement="Flow_CheckoutAndStockValidation_To_PaymentAndOrderProcessing"><di:waypoint x="690" y="560" /><di:waypoint x="760" y="560" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_PaymentAndOrderProcessing_To_CoordinateDeliveryOrCollection_di" bpmnElement="Flow_PaymentAndOrderProcessing_To_CoordinateDeliveryOrCollection"><di:waypoint x="1150" y="560" /><di:waypoint x="1230" y="560" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_CoordinateDeliveryOrCollection_To_OrderComplete_di" bpmnElement="Flow_CoordinateDeliveryOrCollection_To_OrderComplete"><di:waypoint x="1390" y="560" /><di:waypoint x="1460" y="560" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_CheckoutCancelledOrTimedOut_To_CheckoutAbandoned_di" bpmnElement="Flow_CheckoutCancelledOrTimedOut_To_CheckoutAbandoned"><di:waypoint x="655" y="618" /><di:waypoint x="655" y="682" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_PaymentFailedAfterRetries_To_OrderNotPlaced_di" bpmnElement="Flow_PaymentFailedAfterRetries_To_OrderNotPlaced"><di:waypoint x="800" y="618" /><di:waypoint x="800" y="682" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_FoodProblemReported_To_RecordIncidentAndIdentifyProduct_di" bpmnElement="Flow_FoodProblemReported_To_RecordIncidentAndIdentifyProduct"><di:waypoint x="3356" y="890" /><di:waypoint x="3400" y="890" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_RecordIncidentAndIdentifyProduct_To_RequestInformationFromProducer_di" bpmnElement="Flow_RecordIncidentAndIdentifyProduct_To_RequestInformationFromProducer"><di:waypoint x="3550" y="890" /><di:waypoint x="3610" y="890" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_RequestInformationFromProducer_To_GenuineRisk_di" bpmnElement="Flow_RequestInformationFromProducer_To_GenuineRisk"><di:waypoint x="3760" y="890" /><di:waypoint x="3820" y="890" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_SuspendProductAndNotifyAffectedCustomers_To_ReviewIncident_di" bpmnElement="Flow_SuspendProductAndNotifyAffectedCustomers_To_ReviewIncident"><di:waypoint x="4180" y="890" /><di:waypoint x="4250" y="890" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_GenuineRisk_To_NoGenuineRisk_di" bpmnElement="Flow_GenuineRisk_To_NoGenuineRisk"><di:waypoint x="3845" y="915" /><di:waypoint x="3845" y="1012" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ProducerApplicationReceived_To_VerifyAndRegisterProducer_di" bpmnElement="Flow_ProducerApplicationReceived_To_VerifyAndRegisterProducer"><di:waypoint x="378" y="1030" /><di:waypoint x="412" y="1030" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_VerifyAndRegisterProducer_To_ProducerRegistered_di" bpmnElement="Flow_VerifyAndRegisterProducer_To_ProducerRegistered"><di:waypoint x="562" y="1030" /><di:waypoint x="592" y="1030" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ProductDetailsReceived_To_ValidateProductDetails_di" bpmnElement="Flow_ProductDetailsReceived_To_ValidateProductDetails"><di:waypoint x="1756" y="1280" /><di:waypoint x="1800" y="1280" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_DetailsValid_To_PublishProduct_di" bpmnElement="Flow_DetailsValid_To_PublishProduct"><di:waypoint x="2160" y="1280" /><di:waypoint x="2230" y="1280" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_PublishProduct_To_ProductAvailable_di" bpmnElement="Flow_PublishProduct_To_ProductAvailable"><di:waypoint x="2380" y="1280" /><di:waypoint x="2450" y="1280" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_DetailsValid_To_CorrectionsRequested_di" bpmnElement="Flow_DetailsValid_To_CorrectionsRequested"><di:waypoint x="2135" y="1305" /><di:waypoint x="2135" y="1410" /><di:waypoint x="2220" y="1410" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_StockUpdateReceived_To_UpdateStockAndAvailability_di" bpmnElement="Flow_StockUpdateReceived_To_UpdateStockAndAvailability"><di:waypoint x="2456" y="1410" /><di:waypoint x="2500" y="1410" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_UpdateStockAndAvailability_To_AvailabilityUpdated_di" bpmnElement="Flow_UpdateStockAndAvailability_To_AvailabilityUpdated"><di:waypoint x="2660" y="1410" /><di:waypoint x="2730" y="1410" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ProducerOrderReceived_To_PrepareOrderItems_di" bpmnElement="Flow_ProducerOrderReceived_To_PrepareOrderItems"><di:waypoint x="958" y="1780" /><di:waypoint x="1020" y="1780" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_PrepareOrderItems_To_OrderReady_di" bpmnElement="Flow_PrepareOrderItems_To_OrderReady"><di:waypoint x="1160" y="1780" /><di:waypoint x="1262" y="1780" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_WantsToListAProduct_To_SubmitProductDetails_di" bpmnElement="Flow_WantsToListAProduct_To_SubmitProductDetails"><di:waypoint x="1636" y="1780" /><di:waypoint x="1668" y="1780" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_SubmitProductDetails_To_ListingSubmitted_di" bpmnElement="Flow_SubmitProductDetails_To_ListingSubmitted"><di:waypoint x="1808" y="1780" /><di:waypoint x="1860" y="1780" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_StockLevelChanges_To_UpdateStockLevels_di" bpmnElement="Flow_StockLevelChanges_To_UpdateStockLevels"><di:waypoint x="2336" y="1890" /><di:waypoint x="2368" y="1890" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_UpdateStockLevels_To_StockUpdated_di" bpmnElement="Flow_UpdateStockLevels_To_StockUpdated"><di:waypoint x="2508" y="1890" /><di:waypoint x="2560" y="1890" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_WantsToSellFood_To_ApplyToSell_di" bpmnElement="Flow_WantsToSellFood_To_ApplyToSell"><di:waypoint x="258" y="1890" /><di:waypoint x="290" y="1890" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ApplyToSell_To_ApplicationSent_di" bpmnElement="Flow_ApplyToSell_To_ApplicationSent"><di:waypoint x="430" y="1890" /><di:waypoint x="472" y="1890" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_FindsAQualityProblem_To_ReportProblem_di" bpmnElement="Flow_FindsAQualityProblem_To_ReportProblem"><di:waypoint x="3236" y="1780" /><di:waypoint x="3268" y="1780" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ReportProblem_To_ProblemReported2_di" bpmnElement="Flow_ReportProblem_To_ProblemReported2"><di:waypoint x="3408" y="1780" /><di:waypoint x="3450" y="1780" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_InformationRequested_To_ProvideProductInformation_di" bpmnElement="Flow_InformationRequested_To_ProvideProductInformation"><di:waypoint x="3668" y="1780" /><di:waypoint x="3700" y="1780" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ProvideProductInformation_To_InformationSent_di" bpmnElement="Flow_ProvideProductInformation_To_InformationSent"><di:waypoint x="3840" y="1780" /><di:waypoint x="3890" y="1780" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Message_BrowseSearch_di" bpmnElement="Message_BrowseSearch"><di:waypoint x="308" y="220" /><di:waypoint x="308" y="542" /><bpmndi:BPMNLabel><dc:Bounds x="314" y="323" width="45" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Message_Basket_di" bpmnElement="Message_Basket"><di:waypoint x="560" y="220" /><di:waypoint x="560" y="520" /><bpmndi:BPMNLabel><dc:Bounds x="566" y="323" width="45" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Message_OrderSummaryStockIssues_di" bpmnElement="Message_OrderSummaryStockIssues"><di:waypoint x="655" y="520" /><di:waypoint x="655" y="220" /><bpmndi:BPMNLabel><dc:Bounds x="597" y="403" width="52" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Message_AmendmentsConfirmation_di" bpmnElement="Message_AmendmentsConfirmation"><di:waypoint x="680" y="220" /><di:waypoint x="680" y="520" /><bpmndi:BPMNLabel><dc:Bounds x="686" y="396" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Message_PaymentDetails_di" bpmnElement="Message_PaymentDetails"><di:waypoint x="880" y="220" /><di:waypoint x="880" y="520" /><bpmndi:BPMNLabel><dc:Bounds x="886" y="323" width="102" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Message_OrderConfirmation_di" bpmnElement="Message_OrderConfirmation"><di:waypoint x="1028" y="520" /><di:waypoint x="1028" y="198" /><bpmndi:BPMNLabel><dc:Bounds x="926" y="423" width="96" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Message_PaymentRequest_di" bpmnElement="Message_PaymentRequest"><di:waypoint x="1090" y="520" /><di:waypoint x="1090" y="380" /><bpmndi:BPMNLabel><dc:Bounds x="1038" y="408" width="45" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Message_PaymentResult_di" bpmnElement="Message_PaymentResult"><di:waypoint x="1130" y="380" /><di:waypoint x="1130" y="520" /><bpmndi:BPMNLabel><dc:Bounds x="1136" y="408" width="45" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Message_DeliveryCollection_di" bpmnElement="Message_DeliveryCollection"><di:waypoint x="1290" y="520" /><di:waypoint x="1290" y="220" /><bpmndi:BPMNLabel><dc:Bounds x="1296" y="423" width="89" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Message_ProducerOrder_di" bpmnElement="Message_ProducerOrder"><di:waypoint x="940" y="600" /><di:waypoint x="940" y="1762" /><bpmndi:BPMNLabel><dc:Bounds x="946" y="1633" width="39" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Message_OrderReady_di" bpmnElement="Message_OrderReady"><di:waypoint x="1280" y="1762" /><di:waypoint x="1280" y="600" /><bpmndi:BPMNLabel><dc:Bounds x="1286" y="1633" width="39" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Message_ProductDetails_di" bpmnElement="Message_ProductDetails"><di:waypoint x="1738" y="1740" /><di:waypoint x="1738" y="1298" /><bpmndi:BPMNLabel><dc:Bounds x="1744" y="1633" width="102" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Message_CertificateCheck_di" bpmnElement="Message_CertificateCheck"><di:waypoint x="1850" y="1320" /><di:waypoint x="1850" y="1550" /><bpmndi:BPMNLabel><dc:Bounds x="1729" y="1501" width="115" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Message_VerificationResult_di" bpmnElement="Message_VerificationResult"><di:waypoint x="1900" y="1550" /><di:waypoint x="1900" y="1320" /><bpmndi:BPMNLabel><dc:Bounds x="1906" y="1501" width="45" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Message_CorrectionsNeeded_di" bpmnElement="Message_CorrectionsNeeded"><di:waypoint x="2238" y="1428" /><di:waypoint x="2238" y="1675" /><di:waypoint x="1790" y="1675" /><di:waypoint x="1790" y="1740" /><bpmndi:BPMNLabel><dc:Bounds x="1985" y="1658" width="70" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Message_StockUpdate_di" bpmnElement="Message_StockUpdate"><di:waypoint x="2438" y="1850" /><di:waypoint x="2438" y="1428" /><bpmndi:BPMNLabel><dc:Bounds x="2444" y="1633" width="83" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Message_ProblemReport_FromCustomer_di" bpmnElement="Message_ProblemReport_FromCustomer"><di:waypoint x="3338" y="220" /><di:waypoint x="3338" y="872" /><bpmndi:BPMNLabel><dc:Bounds x="3344" y="363" width="52" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Message_ProblemReport_FromProducer_di" bpmnElement="Message_ProblemReport_FromProducer"><di:waypoint x="3338" y="1740" /><di:waypoint x="3338" y="908" /><bpmndi:BPMNLabel><dc:Bounds x="3344" y="1633" width="52" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Message_InformationRequest_di" bpmnElement="Message_InformationRequest"><di:waypoint x="3650" y="930" /><di:waypoint x="3650" y="1762" /><bpmndi:BPMNLabel><dc:Bounds x="3656" y="1633" width="58" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Message_ProductInformation_di" bpmnElement="Message_ProductInformation"><di:waypoint x="3735" y="1740" /><di:waypoint x="3735" y="930" /><bpmndi:BPMNLabel><dc:Bounds x="3741" y="1633" width="45" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Message_SafetyNotice_di" bpmnElement="Message_SafetyNotice"><di:waypoint x="4040" y="850" /><di:waypoint x="4040" y="198" /><bpmndi:BPMNLabel><dc:Bounds x="4046" y="363" width="52" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Message_Application_di" bpmnElement="Message_Application"><di:waypoint x="360" y="1850" /><di:waypoint x="360" y="1048" /><bpmndi:BPMNLabel><dc:Bounds x="366" y="1633" width="77" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="FindProducts_Reads_ProductAndStockRecords_di" bpmnElement="FindProducts_Reads_ProductAndStockRecords"><di:waypoint x="405" y="675" /><di:waypoint x="405" y="600" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="CheckoutAndStockValidation_Reads_ProductAndStockRecords_di" bpmnElement="CheckoutAndStockValidation_Reads_ProductAndStockRecords"><di:waypoint x="430" y="690" /><di:waypoint x="535" y="600" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="PaymentAndOrderProcessing_Updates_OrderCustomerAndProducerRecords_di" bpmnElement="PaymentAndOrderProcessing_Updates_OrderCustomerAndProducerRecords"><di:waypoint x="1040" y="600" /><di:waypoint x="1040" y="675" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="PaymentAndOrderProcessing_Updates_ProductAndStockRecords_di" bpmnElement="PaymentAndOrderProcessing_Updates_ProductAndStockRecords"><di:waypoint x="1120" y="600" /><di:waypoint x="1140" y="680" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Marketplace_EveryWeek_di" bpmnElement="Marketplace_EveryWeek"><dc:Bounds x="1430" y="722" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="1403" y="762" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape><bpmndi:BPMNShape id="Marketplace_PayProducersWeekly_di" bpmnElement="Marketplace_PayProducersWeekly" isExpanded="false"><dc:Bounds x="1500" y="700" width="150" height="80" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="Marketplace_ProducersPaid_di" bpmnElement="Marketplace_ProducersPaid"><dc:Bounds x="1720" y="722" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="1693" y="762" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape><bpmndi:BPMNEdge id="Flow_EveryWeek_To_PayProducersWeekly_di" bpmnElement="Flow_EveryWeek_To_PayProducersWeekly"><di:waypoint x="1466" y="740" /><di:waypoint x="1500" y="740" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="Flow_PayProducersWeekly_To_ProducersPaid_di" bpmnElement="Flow_PayProducersWeekly_To_ProducersPaid"><di:waypoint x="1650" y="740" /><di:waypoint x="1720" y="740" /></bpmndi:BPMNEdge><bpmndi:BPMNShape id="OrderCustomerAndProducerRecords_Settlement_di" bpmnElement="OrderCustomerAndProducerRecords_Settlement"><dc:Bounds x="1580" y="625" width="50" height="50" /><bpmndi:BPMNLabel><dc:Bounds x="1635" y="633" width="100" height="40" /></bpmndi:BPMNLabel></bpmndi:BPMNShape><bpmndi:BPMNEdge id="PayProducersWeekly_Reads_OrderCustomerAndProducerRecords_di" bpmnElement="PayProducersWeekly_Reads_OrderCustomerAndProducerRecords"><di:waypoint x="1605" y="675" /><di:waypoint x="1605" y="700" /></bpmndi:BPMNEdge><bpmndi:BPMNShape id="Marketplace_OfferOrRecipeReceived_di" bpmnElement="Marketplace_OfferOrRecipeReceived"><dc:Bounds x="2672" y="592" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="2645" y="548" width="90" height="40" /></bpmndi:BPMNLabel></bpmndi:BPMNShape><bpmndi:BPMNShape id="Marketplace_ShareOffersAndRecipes_di" bpmnElement="Marketplace_ShareOffersAndRecipes"><dc:Bounds x="2760" y="570" width="150" height="80" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="Marketplace_CustomersInformed_di" bpmnElement="Marketplace_CustomersInformed"><dc:Bounds x="2960" y="592" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="2933" y="632" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape><bpmndi:BPMNEdge id="Flow_OfferOrRecipeReceived_To_ShareOffersAndRecipes_di" bpmnElement="Flow_OfferOrRecipeReceived_To_ShareOffersAndRecipes"><di:waypoint x="2708" y="610" /><di:waypoint x="2760" y="610" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="Flow_ShareOffersAndRecipes_To_CustomersInformed_di" bpmnElement="Flow_ShareOffersAndRecipes_To_CustomersInformed"><di:waypoint x="2910" y="610" /><di:waypoint x="2960" y="610" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="Message_PayoutRequest_di" bpmnElement="Message_PayoutRequest"><di:waypoint x="1535" y="700" /><di:waypoint x="1535" y="360" /><di:waypoint x="1220" y="360" /><bpmndi:BPMNLabel><dc:Bounds x="1380" y="364" width="45" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="Message_PayoutConfirmation_di" bpmnElement="Message_PayoutConfirmation"><di:waypoint x="1220" y="340" /><di:waypoint x="1560" y="340" /><di:waypoint x="1560" y="700" /><bpmndi:BPMNLabel><dc:Bounds x="1360" y="323" width="77" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="Message_PaymentStatement_di" bpmnElement="Message_PaymentStatement"><di:waypoint x="1610" y="780" /><di:waypoint x="1610" y="1700" /><bpmndi:BPMNLabel><dc:Bounds x="1616" y="1627" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="Message_SurplusAndRecipes_di" bpmnElement="Message_SurplusAndRecipes"><di:waypoint x="2690" y="1700" /><di:waypoint x="2690" y="628" /><bpmndi:BPMNLabel><dc:Bounds x="2696" y="1633" width="108" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="Message_OffersAndRecipes_di" bpmnElement="Message_OffersAndRecipes"><di:waypoint x="2835" y="570" /><di:waypoint x="2835" y="280" /><bpmndi:BPMNLabel><dc:Bounds x="2841" y="363" width="108" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge><bpmndi:BPMNShape id="Note_LeadTime_di" bpmnElement="Note_LeadTime"><dc:Bounds x="1020" y="1868" width="240" height="58" /></bpmndi:BPMNShape><bpmndi:BPMNEdge id="Note_LeadTime_Link_di" bpmnElement="Note_LeadTime_Link"><di:waypoint x="1090" y="1868" /><di:waypoint x="1090" y="1820" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="Flow_GenuineRisk_To_Suspend_di" bpmnElement="Flow_GenuineRisk_To_Suspend"><di:waypoint x="3870" y="890" /><di:waypoint x="4010" y="890" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="Flow_ReviewIncident_To_IncidentClosed_di" bpmnElement="Flow_ReviewIncident_To_IncidentClosed"><di:waypoint x="4400" y="890" /><di:waypoint x="4460" y="890" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="Flow_ValidateProductDetails_To_DetailsValid_di" bpmnElement="Flow_ValidateProductDetails_To_DetailsValid"><di:waypoint x="1960" y="1280" /><di:waypoint x="2110" y="1280" /></bpmndi:BPMNEdge><bpmndi:BPMNShape id="Customer_GoAhead_di" bpmnElement="Customer_GoAhead" bioc:stroke="#0d4372" bioc:fill="#bbdefb" color:background-color="#bbdefb" color:border-color="#0d4372"><dc:Bounds x="748" y="155" width="50" height="50" /><bpmndi:BPMNLabel><dc:Bounds x="733" y="128" width="80" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNShape><bpmndi:BPMNShape id="Customer_GaveUp_di" bpmnElement="Customer_GaveUp" bioc:stroke="#0d4372" bioc:fill="#bbdefb" color:background-color="#bbdefb" color:border-color="#0d4372"><dc:Bounds x="755" y="232" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="700" y="243" width="50" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNShape><bpmndi:BPMNEdge id="Flow_GoAhead_To_Pay_di" bpmnElement="Flow_GoAhead_To_Pay"><di:waypoint x="798" y="180" /><di:waypoint x="820" y="180" /><bpmndi:BPMNLabel><dc:Bounds x="799" y="150" width="20" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="Flow_GoAhead_To_GaveUp_di" bpmnElement="Flow_GoAhead_To_GaveUp"><di:waypoint x="773" y="205" /><di:waypoint x="773" y="232" /><bpmndi:BPMNLabel><dc:Bounds x="778" y="207" width="16" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge><bpmndi:BPMNShape id="Customer_Paid_di" bpmnElement="Customer_Paid" bioc:stroke="#0d4372" bioc:fill="#bbdefb" color:background-color="#bbdefb" color:border-color="#0d4372"><dc:Bounds x="1080" y="155" width="50" height="50" /><bpmndi:BPMNLabel><dc:Bounds x="1085" y="128" width="40" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNShape><bpmndi:BPMNShape id="Customer_NoOrder_di" bpmnElement="Customer_NoOrder" bioc:stroke="#0d4372" bioc:fill="#bbdefb" color:background-color="#bbdefb" color:border-color="#0d4372"><dc:Bounds x="1087" y="232" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="1128" y="243" width="50" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNShape><bpmndi:BPMNEdge id="Flow_Paid_To_GetTheOrder_di" bpmnElement="Flow_Paid_To_GetTheOrder"><di:waypoint x="1130" y="180" /><di:waypoint x="1220" y="180" /><bpmndi:BPMNLabel><dc:Bounds x="1150" y="162" width="20" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="Flow_Paid_To_NoOrder_di" bpmnElement="Flow_Paid_To_NoOrder"><di:waypoint x="1105" y="205" /><di:waypoint x="1105" y="232" /><bpmndi:BPMNLabel><dc:Bounds x="1110" y="207" width="16" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge></bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+  <bpmndi:BPMNDiagram id="Marketplace_FindProducts_Diagram">
+    <bpmndi:BPMNPlane id="Marketplace_FindProducts_Plane" bpmnElement="Marketplace_FindProducts">
+      <bpmndi:BPMNShape id="FindProducts_SearchStarted_di" bpmnElement="FindProducts_SearchStarted"><dc:Bounds x="182" y="182" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="155" y="222" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="FindProducts_SearchOrBrowseTheCatalogue_di" bpmnElement="FindProducts_SearchOrBrowseTheCatalogue"><dc:Bounds x="260" y="160" width="140" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="FindProducts_ShowProductsThatAreInStock_di" bpmnElement="FindProducts_ShowProductsThatAreInStock"><dc:Bounds x="450" y="160" width="140" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="FindProducts_ProductsShown_di" bpmnElement="FindProducts_ProductsShown"><dc:Bounds x="632" y="182" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="605" y="222" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_SearchStarted_To_SearchOrBrowseTheCatalogue_di" bpmnElement="Flow_SearchStarted_To_SearchOrBrowseTheCatalogue"><di:waypoint x="218" y="200" /><di:waypoint x="260" y="200" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_SearchOrBrowseTheCatalogue_To_ShowProductsThatAreInStock_di" bpmnElement="Flow_SearchOrBrowseTheCatalogue_To_ShowProductsThatAreInStock"><di:waypoint x="400" y="200" /><di:waypoint x="450" y="200" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ShowProductsThatAreInStock_To_ProductsShown_di" bpmnElement="Flow_ShowProductsThatAreInStock_To_ProductsShown"><di:waypoint x="590" y="200" /><di:waypoint x="632" y="200" /></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+  <bpmndi:BPMNDiagram id="Marketplace_CheckoutAndStockValidation_Diagram">
+    <bpmndi:BPMNPlane id="Marketplace_CheckoutAndStockValidation_Plane" bpmnElement="Marketplace_CheckoutAndStockValidation">
+      <bpmndi:BPMNShape id="CheckoutAndStockValidation_CheckoutStarted_di" bpmnElement="CheckoutAndStockValidation_CheckoutStarted"><dc:Bounds x="162" y="182" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="135" y="222" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="CheckoutAndStockValidation_StockCheckMerge_di" bpmnElement="CheckoutAndStockValidation_StockCheckMerge"><dc:Bounds x="245" y="175" width="50" height="50" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="CheckoutAndStockValidation_CheckStockForEachItem_di" bpmnElement="CheckoutAndStockValidation_CheckStockForEachItem"><dc:Bounds x="320" y="160" width="140" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="CheckoutAndStockValidation_AllItemsInStock_di" bpmnElement="CheckoutAndStockValidation_AllItemsInStock"><dc:Bounds x="505" y="175" width="50" height="50" /><bpmndi:BPMNLabel><dc:Bounds x="480" y="143" width="100" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="CheckoutAndStockValidation_IdentifyProducersInvolved_di" bpmnElement="CheckoutAndStockValidation_IdentifyProducersInvolved"><dc:Bounds x="590" y="160" width="140" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="CheckoutAndStockValidation_DetermineDeliveryOrCollection_di" bpmnElement="CheckoutAndStockValidation_DetermineDeliveryOrCollection"><dc:Bounds x="780" y="160" width="140" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="CheckoutAndStockValidation_CustomerReviewsAndConfirmsOrder_di" bpmnElement="CheckoutAndStockValidation_CustomerReviewsAndConfirmsOrder"><dc:Bounds x="970" y="160" width="140" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="CheckoutAndStockValidation_OrderReadyForPayment_di" bpmnElement="CheckoutAndStockValidation_OrderReadyForPayment"><dc:Bounds x="1162" y="182" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="1135" y="222" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="CheckoutAndStockValidation_AskCustomerToAmendBasket_di" bpmnElement="CheckoutAndStockValidation_AskCustomerToAmendBasket"><dc:Bounds x="460" y="320" width="140" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="CheckoutAndStockValidation_ContinueWithOrder_di" bpmnElement="CheckoutAndStockValidation_ContinueWithOrder"><dc:Bounds x="665" y="335" width="50" height="50" /><bpmndi:BPMNLabel><dc:Bounds x="640" y="303" width="100" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="CheckoutAndStockValidation_CheckoutCancelled_di" bpmnElement="CheckoutAndStockValidation_CheckoutCancelled"><dc:Bounds x="792" y="342" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="765" y="382" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_CheckoutStarted_To_StockCheckMerge_di" bpmnElement="Flow_CheckoutStarted_To_StockCheckMerge"><di:waypoint x="198" y="200" /><di:waypoint x="245" y="200" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_StockCheckMerge_To_CheckStockForEachItem_di" bpmnElement="Flow_StockCheckMerge_To_CheckStockForEachItem"><di:waypoint x="295" y="200" /><di:waypoint x="320" y="200" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_CheckStockForEachItem_To_AllItemsInStock_di" bpmnElement="Flow_CheckStockForEachItem_To_AllItemsInStock"><di:waypoint x="460" y="200" /><di:waypoint x="505" y="200" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_IdentifyProducersInvolved_To_DetermineDeliveryOrCollection_di" bpmnElement="Flow_IdentifyProducersInvolved_To_DetermineDeliveryOrCollection"><di:waypoint x="730" y="200" /><di:waypoint x="780" y="200" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_DetermineDeliveryOrCollection_To_CustomerReviewsAndConfirmsOrder_di" bpmnElement="Flow_DetermineDeliveryOrCollection_To_CustomerReviewsAndConfirmsOrder"><di:waypoint x="920" y="200" /><di:waypoint x="970" y="200" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_CustomerReviewsAndConfirmsOrder_To_OrderReadyForPayment_di" bpmnElement="Flow_CustomerReviewsAndConfirmsOrder_To_OrderReadyForPayment"><di:waypoint x="1110" y="200" /><di:waypoint x="1162" y="200" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_AskCustomerToAmendBasket_To_ContinueWithOrder_di" bpmnElement="Flow_AskCustomerToAmendBasket_To_ContinueWithOrder"><di:waypoint x="600" y="360" /><di:waypoint x="665" y="360" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_AllItemsInStock_To_IdentifyProducersInvolved_di" bpmnElement="Flow_AllItemsInStock_To_IdentifyProducersInvolved"><di:waypoint x="555" y="200" /><di:waypoint x="590" y="200" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_AllItemsInStock_To_AskCustomerToAmendBasket_di" bpmnElement="Flow_AllItemsInStock_To_AskCustomerToAmendBasket"><di:waypoint x="530" y="225" /><di:waypoint x="530" y="320" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ContinueWithOrder_To_CheckoutCancelled_di" bpmnElement="Flow_ContinueWithOrder_To_CheckoutCancelled"><di:waypoint x="715" y="360" /><di:waypoint x="792" y="360" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ContinueWithOrder_To_StockCheckMerge_di" bpmnElement="Flow_ContinueWithOrder_To_StockCheckMerge"><di:waypoint x="690" y="385" /><di:waypoint x="690" y="460" /><di:waypoint x="270" y="460" /><di:waypoint x="270" y="225" /></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+  <bpmndi:BPMNDiagram id="Marketplace_PaymentAndOrderProcessing_Diagram">
+    <bpmndi:BPMNPlane id="Marketplace_PaymentAndOrderProcessing_Plane" bpmnElement="Marketplace_PaymentAndOrderProcessing">
+      <bpmndi:BPMNShape id="PaymentAndOrderProcessing_OrderConfirmedByCustomer_di" bpmnElement="PaymentAndOrderProcessing_OrderConfirmedByCustomer"><dc:Bounds x="162" y="182" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="135" y="222" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="PaymentAndOrderProcessing_CreateMarketplaceOrder_di" bpmnElement="PaymentAndOrderProcessing_CreateMarketplaceOrder"><dc:Bounds x="240" y="160" width="140" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="PaymentAndOrderProcessing_SplitOrderByProducer_di" bpmnElement="PaymentAndOrderProcessing_SplitOrderByProducer"><dc:Bounds x="430" y="160" width="140" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="PaymentAndOrderProcessing_PaymentAttemptMerge_di" bpmnElement="PaymentAndOrderProcessing_PaymentAttemptMerge"><dc:Bounds x="605" y="175" width="50" height="50" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="PaymentAndOrderProcessing_SendPaymentToPaymentService_di" bpmnElement="PaymentAndOrderProcessing_SendPaymentToPaymentService"><dc:Bounds x="690" y="160" width="140" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="PaymentAndOrderProcessing_PaymentSuccessful_di" bpmnElement="PaymentAndOrderProcessing_PaymentSuccessful"><dc:Bounds x="875" y="175" width="50" height="50" /><bpmndi:BPMNLabel><dc:Bounds x="850" y="143" width="100" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="PaymentAndOrderProcessing_ConfirmOrder_di" bpmnElement="PaymentAndOrderProcessing_ConfirmOrder"><dc:Bounds x="960" y="160" width="140" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="PaymentAndOrderProcessing_UpdateStock_di" bpmnElement="PaymentAndOrderProcessing_UpdateStock"><dc:Bounds x="1150" y="160" width="140" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="PaymentAndOrderProcessing_NotifyProducers_di" bpmnElement="PaymentAndOrderProcessing_NotifyProducers"><dc:Bounds x="1340" y="160" width="140" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="PaymentAndOrderProcessing_CalculateProducerAmountsAnd5Commission_di" bpmnElement="PaymentAndOrderProcessing_CalculateProducerAmountsAnd5Commission"><dc:Bounds x="1530" y="160" width="140" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="PaymentAndOrderProcessing_OrderPlaced_di" bpmnElement="PaymentAndOrderProcessing_OrderPlaced"><dc:Bounds x="1722" y="182" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="1695" y="222" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="PaymentAndOrderProcessing_TellCustomerThePaymentDidNotGoThrough_di" bpmnElement="PaymentAndOrderProcessing_TellCustomerThePaymentDidNotGoThrough"><dc:Bounds x="830" y="320" width="140" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="PaymentAndOrderProcessing_RetryPayment_di" bpmnElement="PaymentAndOrderProcessing_RetryPayment"><dc:Bounds x="1035" y="335" width="50" height="50" /><bpmndi:BPMNLabel><dc:Bounds x="1010" y="303" width="100" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="PaymentAndOrderProcessing_PaymentFailed_di" bpmnElement="PaymentAndOrderProcessing_PaymentFailed"><dc:Bounds x="1162" y="342" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="1135" y="382" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_OrderConfirmedByCustomer_To_CreateMarketplaceOrder_di" bpmnElement="Flow_OrderConfirmedByCustomer_To_CreateMarketplaceOrder"><di:waypoint x="198" y="200" /><di:waypoint x="240" y="200" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_CreateMarketplaceOrder_To_SplitOrderByProducer_di" bpmnElement="Flow_CreateMarketplaceOrder_To_SplitOrderByProducer"><di:waypoint x="380" y="200" /><di:waypoint x="430" y="200" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_SplitOrderByProducer_To_PaymentAttemptMerge_di" bpmnElement="Flow_SplitOrderByProducer_To_PaymentAttemptMerge"><di:waypoint x="570" y="200" /><di:waypoint x="605" y="200" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_PaymentAttemptMerge_To_SendPaymentToPaymentService_di" bpmnElement="Flow_PaymentAttemptMerge_To_SendPaymentToPaymentService"><di:waypoint x="655" y="200" /><di:waypoint x="690" y="200" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_SendPaymentToPaymentService_To_PaymentSuccessful_di" bpmnElement="Flow_SendPaymentToPaymentService_To_PaymentSuccessful"><di:waypoint x="830" y="200" /><di:waypoint x="875" y="200" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ConfirmOrder_To_UpdateStock_di" bpmnElement="Flow_ConfirmOrder_To_UpdateStock"><di:waypoint x="1100" y="200" /><di:waypoint x="1150" y="200" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_UpdateStock_To_NotifyProducers_di" bpmnElement="Flow_UpdateStock_To_NotifyProducers"><di:waypoint x="1290" y="200" /><di:waypoint x="1340" y="200" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_NotifyProducers_To_CalculateProducerAmountsAnd5Commission_di" bpmnElement="Flow_NotifyProducers_To_CalculateProducerAmountsAnd5Commission"><di:waypoint x="1480" y="200" /><di:waypoint x="1530" y="200" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_CalculateProducerAmountsAnd5Commission_To_OrderPlaced_di" bpmnElement="Flow_CalculateProducerAmountsAnd5Commission_To_OrderPlaced"><di:waypoint x="1670" y="200" /><di:waypoint x="1722" y="200" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_TellCustomerThePaymentDidNotGoThrough_To_RetryPayment_di" bpmnElement="Flow_TellCustomerThePaymentDidNotGoThrough_To_RetryPayment"><di:waypoint x="970" y="360" /><di:waypoint x="1035" y="360" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_PaymentSuccessful_To_ConfirmOrder_di" bpmnElement="Flow_PaymentSuccessful_To_ConfirmOrder"><di:waypoint x="925" y="200" /><di:waypoint x="960" y="200" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_PaymentSuccessful_To_TellCustomerThePaymentDidNotGoThrough_di" bpmnElement="Flow_PaymentSuccessful_To_TellCustomerThePaymentDidNotGoThrough"><di:waypoint x="900" y="225" /><di:waypoint x="900" y="320" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_RetryPayment_To_PaymentFailed_di" bpmnElement="Flow_RetryPayment_To_PaymentFailed"><di:waypoint x="1085" y="360" /><di:waypoint x="1162" y="360" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_RetryPayment_To_PaymentAttemptMerge_di" bpmnElement="Flow_RetryPayment_To_PaymentAttemptMerge"><di:waypoint x="1060" y="385" /><di:waypoint x="1060" y="460" /><di:waypoint x="630" y="460" /><di:waypoint x="630" y="225" /></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+  <bpmndi:BPMNDiagram id="Marketplace_CoordinateDeliveryOrCollection_Diagram">
+    <bpmndi:BPMNPlane id="Marketplace_CoordinateDeliveryOrCollection_Plane" bpmnElement="Marketplace_CoordinateDeliveryOrCollection">
+      <bpmndi:BPMNShape id="CoordinateDeliveryOrCollection_ProducerOrdersReady_di" bpmnElement="CoordinateDeliveryOrCollection_ProducerOrdersReady"><dc:Bounds x="182" y="182" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="155" y="222" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="CoordinateDeliveryOrCollection_ArrangeDeliveryOrCollectionSlot_di" bpmnElement="CoordinateDeliveryOrCollection_ArrangeDeliveryOrCollectionSlot"><dc:Bounds x="260" y="160" width="140" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="CoordinateDeliveryOrCollection_UpdateTheCustomer_di" bpmnElement="CoordinateDeliveryOrCollection_UpdateTheCustomer"><dc:Bounds x="450" y="160" width="140" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="CoordinateDeliveryOrCollection_OrderHandedOver_di" bpmnElement="CoordinateDeliveryOrCollection_OrderHandedOver"><dc:Bounds x="632" y="182" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="605" y="222" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_ProducerOrdersReady_To_ArrangeDeliveryOrCollectionSlot_di" bpmnElement="Flow_ProducerOrdersReady_To_ArrangeDeliveryOrCollectionSlot"><di:waypoint x="218" y="200" /><di:waypoint x="260" y="200" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ArrangeDeliveryOrCollectionSlot_To_UpdateTheCustomer_di" bpmnElement="Flow_ArrangeDeliveryOrCollectionSlot_To_UpdateTheCustomer"><di:waypoint x="400" y="200" /><di:waypoint x="450" y="200" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_UpdateTheCustomer_To_OrderHandedOver_di" bpmnElement="Flow_UpdateTheCustomer_To_OrderHandedOver"><di:waypoint x="590" y="200" /><di:waypoint x="632" y="200" /></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+  <bpmndi:BPMNDiagram id="Marketplace_RecordIncidentAndIdentifyProduct_Diagram">
+    <bpmndi:BPMNPlane id="Marketplace_RecordIncidentAndIdentifyProduct_Plane" bpmnElement="Marketplace_RecordIncidentAndIdentifyProduct">
+      <bpmndi:BPMNShape id="RecordIncidentAndIdentifyProduct_IncidentReceived_di" bpmnElement="RecordIncidentAndIdentifyProduct_IncidentReceived"><dc:Bounds x="182" y="182" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="155" y="222" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="RecordIncidentAndIdentifyProduct_CreateIncidentRecord_di" bpmnElement="RecordIncidentAndIdentifyProduct_CreateIncidentRecord"><dc:Bounds x="260" y="160" width="140" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="RecordIncidentAndIdentifyProduct_IdentifyProductAndProducer_di" bpmnElement="RecordIncidentAndIdentifyProduct_IdentifyProductAndProducer"><dc:Bounds x="450" y="160" width="140" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="RecordIncidentAndIdentifyProduct_FindOrdersContainingTheProduct_di" bpmnElement="RecordIncidentAndIdentifyProduct_FindOrdersContainingTheProduct"><dc:Bounds x="640" y="160" width="140" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="RecordIncidentAndIdentifyProduct_IncidentRecorded_di" bpmnElement="RecordIncidentAndIdentifyProduct_IncidentRecorded"><dc:Bounds x="822" y="182" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="795" y="222" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_IncidentReceived_To_CreateIncidentRecord_di" bpmnElement="Flow_IncidentReceived_To_CreateIncidentRecord"><di:waypoint x="218" y="200" /><di:waypoint x="260" y="200" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_CreateIncidentRecord_To_IdentifyProductAndProducer_di" bpmnElement="Flow_CreateIncidentRecord_To_IdentifyProductAndProducer"><di:waypoint x="400" y="200" /><di:waypoint x="450" y="200" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_IdentifyProductAndProducer_To_FindOrdersContainingTheProduct_di" bpmnElement="Flow_IdentifyProductAndProducer_To_FindOrdersContainingTheProduct"><di:waypoint x="590" y="200" /><di:waypoint x="640" y="200" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_FindOrdersContainingTheProduct_To_IncidentRecorded_di" bpmnElement="Flow_FindOrdersContainingTheProduct_To_IncidentRecorded"><di:waypoint x="780" y="200" /><di:waypoint x="822" y="200" /></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+  <bpmndi:BPMNDiagram id="Marketplace_RequestInformationFromProducer_Diagram">
+    <bpmndi:BPMNPlane id="Marketplace_RequestInformationFromProducer_Plane" bpmnElement="Marketplace_RequestInformationFromProducer">
+      <bpmndi:BPMNShape id="RequestInformationFromProducer_InformationNeeded_di" bpmnElement="RequestInformationFromProducer_InformationNeeded"><dc:Bounds x="182" y="182" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="155" y="222" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="RequestInformationFromProducer_SendInformationRequestToProducer_di" bpmnElement="RequestInformationFromProducer_SendInformationRequestToProducer"><dc:Bounds x="260" y="160" width="140" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="RequestInformationFromProducer_RecordProducerResponse_di" bpmnElement="RequestInformationFromProducer_RecordProducerResponse"><dc:Bounds x="450" y="160" width="140" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="RequestInformationFromProducer_ResponseRecorded_di" bpmnElement="RequestInformationFromProducer_ResponseRecorded"><dc:Bounds x="632" y="182" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="605" y="222" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_InformationNeeded_To_SendInformationRequestToProducer_di" bpmnElement="Flow_InformationNeeded_To_SendInformationRequestToProducer"><di:waypoint x="218" y="200" /><di:waypoint x="260" y="200" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_SendInformationRequestToProducer_To_RecordProducerResponse_di" bpmnElement="Flow_SendInformationRequestToProducer_To_RecordProducerResponse"><di:waypoint x="400" y="200" /><di:waypoint x="450" y="200" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_RecordProducerResponse_To_ResponseRecorded_di" bpmnElement="Flow_RecordProducerResponse_To_ResponseRecorded"><di:waypoint x="590" y="200" /><di:waypoint x="632" y="200" /></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+  <bpmndi:BPMNDiagram id="Marketplace_SuspendProductAndNotifyAffectedCustomers_Diagram">
+    <bpmndi:BPMNPlane id="Marketplace_SuspendProductAndNotifyAffectedCustomers_Plane" bpmnElement="Marketplace_SuspendProductAndNotifyAffectedCustomers">
+      <bpmndi:BPMNShape id="SuspendProductAndNotifyAffectedCustomers_RiskConfirmed_di" bpmnElement="SuspendProductAndNotifyAffectedCustomers_RiskConfirmed"><dc:Bounds x="182" y="182" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="155" y="222" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SuspendProductAndNotifyAffectedCustomers_SuspendProductFromSale_di" bpmnElement="SuspendProductAndNotifyAffectedCustomers_SuspendProductFromSale"><dc:Bounds x="260" y="160" width="140" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SuspendProductAndNotifyAffectedCustomers_IdentifyAffectedCustomers_di" bpmnElement="SuspendProductAndNotifyAffectedCustomers_IdentifyAffectedCustomers"><dc:Bounds x="450" y="160" width="140" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SuspendProductAndNotifyAffectedCustomers_SendSafetyNotifications_di" bpmnElement="SuspendProductAndNotifyAffectedCustomers_SendSafetyNotifications"><dc:Bounds x="640" y="160" width="140" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SuspendProductAndNotifyAffectedCustomers_RecordNotificationResults_di" bpmnElement="SuspendProductAndNotifyAffectedCustomers_RecordNotificationResults"><dc:Bounds x="830" y="160" width="140" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SuspendProductAndNotifyAffectedCustomers_CustomersNotified_di" bpmnElement="SuspendProductAndNotifyAffectedCustomers_CustomersNotified"><dc:Bounds x="1012" y="182" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="985" y="222" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_RiskConfirmed_To_SuspendProductFromSale_di" bpmnElement="Flow_RiskConfirmed_To_SuspendProductFromSale"><di:waypoint x="218" y="200" /><di:waypoint x="260" y="200" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_SuspendProductFromSale_To_IdentifyAffectedCustomers_di" bpmnElement="Flow_SuspendProductFromSale_To_IdentifyAffectedCustomers"><di:waypoint x="400" y="200" /><di:waypoint x="450" y="200" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_IdentifyAffectedCustomers_To_SendSafetyNotifications_di" bpmnElement="Flow_IdentifyAffectedCustomers_To_SendSafetyNotifications"><di:waypoint x="590" y="200" /><di:waypoint x="640" y="200" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_SendSafetyNotifications_To_RecordNotificationResults_di" bpmnElement="Flow_SendSafetyNotifications_To_RecordNotificationResults"><di:waypoint x="780" y="200" /><di:waypoint x="830" y="200" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_RecordNotificationResults_To_CustomersNotified_di" bpmnElement="Flow_RecordNotificationResults_To_CustomersNotified"><di:waypoint x="970" y="200" /><di:waypoint x="1012" y="200" /></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+  <bpmndi:BPMNDiagram id="Marketplace_ReviewIncident_Diagram">
+    <bpmndi:BPMNPlane id="Marketplace_ReviewIncident_Plane" bpmnElement="Marketplace_ReviewIncident">
+      <bpmndi:BPMNShape id="ReviewIncident_ActionsComplete_di" bpmnElement="ReviewIncident_ActionsComplete"><dc:Bounds x="182" y="182" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="155" y="222" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ReviewIncident_CheckAllActionsAreComplete_di" bpmnElement="ReviewIncident_CheckAllActionsAreComplete"><dc:Bounds x="260" y="160" width="140" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ReviewIncident_RecordReviewDecision_di" bpmnElement="ReviewIncident_RecordReviewDecision"><dc:Bounds x="450" y="160" width="140" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ReviewIncident_ReviewRecorded_di" bpmnElement="ReviewIncident_ReviewRecorded"><dc:Bounds x="632" y="182" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="605" y="222" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_ActionsComplete_To_CheckAllActionsAreComplete_di" bpmnElement="Flow_ActionsComplete_To_CheckAllActionsAreComplete"><di:waypoint x="218" y="200" /><di:waypoint x="260" y="200" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_CheckAllActionsAreComplete_To_RecordReviewDecision_di" bpmnElement="Flow_CheckAllActionsAreComplete_To_RecordReviewDecision"><di:waypoint x="400" y="200" /><di:waypoint x="450" y="200" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_RecordReviewDecision_To_ReviewRecorded_di" bpmnElement="Flow_RecordReviewDecision_To_ReviewRecorded"><di:waypoint x="590" y="200" /><di:waypoint x="632" y="200" /></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+  <bpmndi:BPMNDiagram id="Marketplace_VerifyAndRegisterProducer_Diagram">
+    <bpmndi:BPMNPlane id="Marketplace_VerifyAndRegisterProducer_Plane" bpmnElement="Marketplace_VerifyAndRegisterProducer">
+      <bpmndi:BPMNShape id="VerifyAndRegisterProducer_ApplicationReceived_di" bpmnElement="VerifyAndRegisterProducer_ApplicationReceived"><dc:Bounds x="182" y="182" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="155" y="222" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="VerifyAndRegisterProducer_CheckProducerDetails_di" bpmnElement="VerifyAndRegisterProducer_CheckProducerDetails"><dc:Bounds x="260" y="160" width="140" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="VerifyAndRegisterProducer_CreateProducerAccount_di" bpmnElement="VerifyAndRegisterProducer_CreateProducerAccount"><dc:Bounds x="450" y="160" width="140" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="VerifyAndRegisterProducer_AccountCreated_di" bpmnElement="VerifyAndRegisterProducer_AccountCreated"><dc:Bounds x="632" y="182" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="605" y="222" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_ApplicationReceived_To_CheckProducerDetails_di" bpmnElement="Flow_ApplicationReceived_To_CheckProducerDetails"><di:waypoint x="218" y="200" /><di:waypoint x="260" y="200" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_CheckProducerDetails_To_CreateProducerAccount_di" bpmnElement="Flow_CheckProducerDetails_To_CreateProducerAccount"><di:waypoint x="400" y="200" /><di:waypoint x="450" y="200" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_CreateProducerAccount_To_AccountCreated_di" bpmnElement="Flow_CreateProducerAccount_To_AccountCreated"><di:waypoint x="590" y="200" /><di:waypoint x="632" y="200" /></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+  <bpmndi:BPMNDiagram id="Marketplace_ValidateProductDetails_Diagram">
+    <bpmndi:BPMNPlane id="Marketplace_ValidateProductDetails_Plane" bpmnElement="Marketplace_ValidateProductDetails">
+      <bpmndi:BPMNShape id="ValidateProductDetails_DetailsReceived_di" bpmnElement="ValidateProductDetails_DetailsReceived"><dc:Bounds x="182" y="182" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="155" y="222" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ValidateProductDetails_CheckMandatoryInformation_di" bpmnElement="ValidateProductDetails_CheckMandatoryInformation"><dc:Bounds x="260" y="160" width="140" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ValidateProductDetails_VerifyOrganicCertificateIfClaimed_di" bpmnElement="ValidateProductDetails_VerifyOrganicCertificateIfClaimed"><dc:Bounds x="450" y="160" width="140" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ValidateProductDetails_ValidationFinished_di" bpmnElement="ValidateProductDetails_ValidationFinished"><dc:Bounds x="632" y="182" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="605" y="222" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_DetailsReceived_To_CheckMandatoryInformation_di" bpmnElement="Flow_DetailsReceived_To_CheckMandatoryInformation"><di:waypoint x="218" y="200" /><di:waypoint x="260" y="200" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_CheckMandatoryInformation_To_VerifyOrganicCertificateIfClaimed_di" bpmnElement="Flow_CheckMandatoryInformation_To_VerifyOrganicCertificateIfClaimed"><di:waypoint x="400" y="200" /><di:waypoint x="450" y="200" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_VerifyOrganicCertificateIfClaimed_To_ValidationFinished_di" bpmnElement="Flow_VerifyOrganicCertificateIfClaimed_To_ValidationFinished"><di:waypoint x="590" y="200" /><di:waypoint x="632" y="200" /></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+  <bpmndi:BPMNDiagram id="Marketplace_PublishProduct_Diagram">
+    <bpmndi:BPMNPlane id="Marketplace_PublishProduct_Plane" bpmnElement="Marketplace_PublishProduct">
+      <bpmndi:BPMNShape id="PublishProduct_DetailsApproved_di" bpmnElement="PublishProduct_DetailsApproved"><dc:Bounds x="182" y="182" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="155" y="222" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="PublishProduct_CreateProductListing_di" bpmnElement="PublishProduct_CreateProductListing"><dc:Bounds x="260" y="160" width="140" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="PublishProduct_MakeProductVisibleToCustomers_di" bpmnElement="PublishProduct_MakeProductVisibleToCustomers"><dc:Bounds x="450" y="160" width="140" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="PublishProduct_ListingLive_di" bpmnElement="PublishProduct_ListingLive"><dc:Bounds x="632" y="182" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="605" y="222" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_DetailsApproved_To_CreateProductListing_di" bpmnElement="Flow_DetailsApproved_To_CreateProductListing"><di:waypoint x="218" y="200" /><di:waypoint x="260" y="200" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_CreateProductListing_To_MakeProductVisibleToCustomers_di" bpmnElement="Flow_CreateProductListing_To_MakeProductVisibleToCustomers"><di:waypoint x="400" y="200" /><di:waypoint x="450" y="200" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_MakeProductVisibleToCustomers_To_ListingLive_di" bpmnElement="Flow_MakeProductVisibleToCustomers_To_ListingLive"><di:waypoint x="590" y="200" /><di:waypoint x="632" y="200" /></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+  <bpmndi:BPMNDiagram id="Marketplace_UpdateStockAndAvailability_Diagram">
+    <bpmndi:BPMNPlane id="Marketplace_UpdateStockAndAvailability_Plane" bpmnElement="Marketplace_UpdateStockAndAvailability">
+      <bpmndi:BPMNShape id="UpdateStockAndAvailability_StockLevelReceived_di" bpmnElement="UpdateStockAndAvailability_StockLevelReceived"><dc:Bounds x="182" y="182" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="155" y="222" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="UpdateStockAndAvailability_RecordNewStockLevel_di" bpmnElement="UpdateStockAndAvailability_RecordNewStockLevel"><dc:Bounds x="260" y="160" width="140" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="UpdateStockAndAvailability_SetAvailabilityFromStockAndSeason_di" bpmnElement="UpdateStockAndAvailability_SetAvailabilityFromStockAndSeason"><dc:Bounds x="450" y="160" width="140" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="UpdateStockAndAvailability_AvailabilitySet_di" bpmnElement="UpdateStockAndAvailability_AvailabilitySet"><dc:Bounds x="632" y="182" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="605" y="222" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_StockLevelReceived_To_RecordNewStockLevel_di" bpmnElement="Flow_StockLevelReceived_To_RecordNewStockLevel"><di:waypoint x="218" y="200" /><di:waypoint x="260" y="200" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_RecordNewStockLevel_To_SetAvailabilityFromStockAndSeason_di" bpmnElement="Flow_RecordNewStockLevel_To_SetAvailabilityFromStockAndSeason"><di:waypoint x="400" y="200" /><di:waypoint x="450" y="200" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_SetAvailabilityFromStockAndSeason_To_AvailabilitySet_di" bpmnElement="Flow_SetAvailabilityFromStockAndSeason_To_AvailabilitySet"><di:waypoint x="590" y="200" /><di:waypoint x="632" y="200" /></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+<bpmndi:BPMNDiagram id="BPMNDiagram_PayProducersWeekly"><bpmndi:BPMNPlane id="BPMNPlane_PayProducersWeekly" bpmnElement="Marketplace_PayProducersWeekly"><bpmndi:BPMNShape id="PayProducers_WeekEnded_di" bpmnElement="PayProducers_WeekEnded"><dc:Bounds x="160" y="102" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="133" y="142" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape><bpmndi:BPMNShape id="PayProducers_AddUpAmounts_di" bpmnElement="PayProducers_AddUpAmounts"><dc:Bounds x="250" y="80" width="140" height="80" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="PayProducers_SendPayments_di" bpmnElement="PayProducers_SendPayments"><dc:Bounds x="440" y="80" width="140" height="80" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="PayProducers_RecordStatement_di" bpmnElement="PayProducers_RecordStatement"><dc:Bounds x="630" y="80" width="140" height="80" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="PayProducers_Done_di" bpmnElement="PayProducers_Done"><dc:Bounds x="820" y="102" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="793" y="142" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape><bpmndi:BPMNEdge id="Flow_PayProducers_WeekEnded_To_PayProducers_AddUpAmounts_di" bpmnElement="Flow_PayProducers_WeekEnded_To_PayProducers_AddUpAmounts"><di:waypoint x="196" y="120" /><di:waypoint x="250" y="120" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="Flow_PayProducers_AddUpAmounts_To_PayProducers_SendPayments_di" bpmnElement="Flow_PayProducers_AddUpAmounts_To_PayProducers_SendPayments"><di:waypoint x="390" y="120" /><di:waypoint x="440" y="120" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="Flow_PayProducers_SendPayments_To_PayProducers_RecordStatement_di" bpmnElement="Flow_PayProducers_SendPayments_To_PayProducers_RecordStatement"><di:waypoint x="580" y="120" /><di:waypoint x="630" y="120" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="Flow_PayProducers_RecordStatement_To_PayProducers_Done_di" bpmnElement="Flow_PayProducers_RecordStatement_To_PayProducers_Done"><di:waypoint x="770" y="120" /><di:waypoint x="820" y="120" /></bpmndi:BPMNEdge></bpmndi:BPMNPlane></bpmndi:BPMNDiagram></bpmn:definitions>
