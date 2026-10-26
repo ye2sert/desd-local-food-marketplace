@@ -35,7 +35,7 @@ Model the marketplace at a strategic level, agree the scope of our two major fun
 | T12 | Plan and rehearse / record Sprint 1 review | All | 3 |
 | T13 | Prepare and submit ZIP (links, screenshots, video if used) | Rohan | 1 |
 
-Task status is tracked live on the [project board](https://github.com/users/rsami040405/projects/1) (To Do / In Progress / Review / Done).
+Task status is tracked live on our Jira project board: https://live-team-oq9nzy44.atlassian.net/jira/software/projects/SCRUM/boards/1 (To Do / In Progress / In Review / Done).
 
 ## Timeline
 
