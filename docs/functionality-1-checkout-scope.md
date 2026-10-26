@@ -1,4 +1,3 @@
- ```markdown                                                                                                                                                                                                                
 # Functionality 1 – Checkout & Stock Validation
 
 Owner: Yunus Sert · Jira: SCRUM-32 (T7) · Use case: Use Case 2 – Customer Multi-Vendor Order, Checkout and Payment
@@ -33,7 +32,7 @@ The brief says a major functionality needs six things. Checkout has all six:
 
 **Inputs:** basket items · requested quantities · product availability and stock levels · producer details (including delivery/collection options)
 
-**Outputs:** validated basket/order · list of producers involved · delivery or collection arrangement per producer · confirmation that the order can move to payment
+**Outputs:** validated basket/order · list of producers involved · delivery or collection arrangement per producer · subtotal per producer · order total · confirmation that the order can move to payment
 
 ## 5. Main flow
 1. Customer goes to checkout.
@@ -68,6 +67,17 @@ The brief says a major functionality needs six things. Checkout has all six:
 - **Ends:** order confirmed and ready for payment.
 - **Not my part:** payment, splitting the order by producer, reducing stock, telling producers, the 5% commission. These are all in Payment & Order Processing (Mackenzie).
 
+### What checkout passes to Payment & Order Processing
+| Data | Example |
+|---|---|
+| Basket / order reference | `basketId` |
+| Customer | `customerId` |
+| Items | product, producer, quantity, unit price |
+| Per producer | subtotal and delivery or collection arrangement |
+| Order total | sum of all producer subtotals (plus any delivery charges) |
+
+Checkout calculates the total and shows it to the customer before they confirm (US5). Payment & Order Processing charges this total, then works out each producer's amount and the 5% commission.
+
 ## 9. Traceability
 | Use Case 2 requirement | Step | User story | BPMN element |
 |---|---|---|---|
@@ -97,4 +107,4 @@ In Sprint 2 the draft diagram becomes the full operational BPMN and starts runni
 - Stock only goes down after payment, so it could change between checkout and payment. Should checkout hold the stock for a short time, or should payment check it again?
 
 ---
- ```  
+AI was used in an assistive role throughout this document. It was reviewed by our team and changes were made.
