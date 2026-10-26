@@ -37,6 +37,19 @@ Model the marketplace at a strategic level, agree the scope of our two major fun
 
 Task status is tracked live on our Jira project board: https://live-team-oq9nzy44.atlassian.net/jira/software/projects/SCRUM/boards/1 (To Do / In Progress / In Review / Done).
 
+## Contribution plan
+
+Points include Sprint 1 tasks and backlog items; shared items (T11, T12, PW8) are excluded because everyone does them together. The split is reviewed at the start of each sprint.
+
+| Member | Sprint 1 tasks | Backlog items | Points | Share |
+|---|---|---|---|---|
+| Hamza | T5, T6 (8) | PW2, US8, PW7 (13) | 21 | 20% |
+| Tahmid | T3, T4 (6) | PW1, US2, US12 (15) | 21 | 20% |
+| Yunus | T7 (3) | PW3, US1, US3, US4, US5, US11 (18) | 21 | 20% |
+| Mackenzie | T8, T9 (4) | PW4, US7, US9, US10, PW9 (17) | 21 | 20% |
+| Rohan | T1, T2, T10, T13 (6) | PW5, PW6, US6 (15) | 21 | 20% |
+| | | **Total** | **105** | **100%** |
+
 ## Timeline
 
 | Date | Activity |
