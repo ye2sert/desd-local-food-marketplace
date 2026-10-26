@@ -11,7 +11,7 @@ Model the marketplace at a strategic level, agree the scope of our two major fun
 
 | Member | Role | Sprint 1 focus |
 |---|---|---|
-| Hamza | Strategic modelling lead | Strategic BPMN model |
+| Hamza | Strategic BPMN & integration | Strategic BPMN model |
 | Tahmid | Business analyst | Stakeholder and process analysis |
 | Yunus | Functionality lead – Checkout & Stock Validation | Scope of functionality 1 |
 | Mackenzie | Functionality lead – Payment & Order Processing | Scope of functionality 2 |
@@ -57,7 +57,7 @@ Points include Sprint 1 tasks and backlog items; shared items (T11, T12, PW8) ar
 | Thu 22 Oct | Group call: agree review format, processes and pools |
 | Fri 23 – Sat 24 Oct | Individual tasks (T3–T10) |
 | Mon 26 Oct | Review meeting: finalise strategic BPMN, commit work |
-| Mon 26 – Wed 28 Oct | Tell tutor format (if in-class), rehearse or record, check links |
+| Tue 27 – Wed 28 Oct | Record review video, check links |
 | Thu 29 Oct | Submit ZIP before 14:00 |
 
 ## Definition of done
@@ -67,8 +67,8 @@ Points include Sprint 1 tasks and backlog items; shared items (T11, T12, PW8) ar
 
 ## Risks
 
-| Risk | Action |
-|---|---|
+| Risk | Action | Status |
+|---|---|---|
 | Functionalities not yet approved by module team | Mackenzie to confirm at the next practical session | Open |
 | Getting all five members on camera before the deadline | Record on Tue 27 or Wed 28 Oct to leave time for a retake; do a short test recording first | Open |
 | Markers cannot open links | Repo made public; Jira board screenshots included in the ZIP | Open |
