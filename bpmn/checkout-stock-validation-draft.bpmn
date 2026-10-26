@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:modeler="http://camunda.org/schema/modeler/1.0" xmlns:ns1="modeler" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:ns0="xmlns" id="bpmn_copilot_Definition_id" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Web Modeler" exporterVersion="f127538" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.6.0" ns0:modeler="http://camunda.org/schema/modeler/1.0" ns1:executionPlatform="Camunda Cloud" ns1:executionPlatformVersion="8.6">
+  <bpmn:collaboration id="Collaboration_0k5d29a">
+    <bpmn:participant id="Participant_13vaacy" name="Local Food Marketplace" processRef="Process_Checkout" />
+  </bpmn:collaboration>
+  <bpmn:process id="Process_Checkout" processType="None" isClosed="false" isExecutable="true">
+    <bpmn:laneSet id="LaneSet_1">
+      <bpmn:lane id="Lane_01jzsz8" name="Customer">
+        <bpmn:flowNodeRef>StartEvent_Checkout</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ConfirmOrder</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_AmendBasket</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_0zkrqsw" name="Platform">
+        <bpmn:flowNodeRef>EndEvent_ReadyForPayment</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_CheckStock</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_StockCheck</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_InformCustomer</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_IdentifyProducers</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_1nhn4f7</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_DetermineArrangements</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:endEvent id="EndEvent_ReadyForPayment" name="Order ready for payment">
+      <bpmn:incoming>Flow_01vppj0</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_To_ConfirmOrder" sourceRef="Task_DetermineArrangements" targetRef="Task_ConfirmOrder" />
+    <bpmn:sequenceFlow id="Flow_To_DetermineArrangements" sourceRef="Task_IdentifyProducers" targetRef="Task_DetermineArrangements" />
+    <bpmn:sequenceFlow id="Flow_1ry4lcq" name="Yes" sourceRef="Gateway_StockCheck" targetRef="Task_IdentifyProducers" />
+    <bpmn:sequenceFlow id="Flow_To_Gateway" sourceRef="Task_CheckStock" targetRef="Gateway_StockCheck" />
+    <bpmn:sequenceFlow id="Flow_123qy1x" name="No" sourceRef="Gateway_StockCheck" targetRef="Task_InformCustomer" />
+    <bpmn:sequenceFlow id="Flow_1hzu8qo" sourceRef="Task_InformCustomer" targetRef="Task_AmendBasket" />
+    <bpmn:startEvent id="StartEvent_Checkout" name="Customer proceeds to checkout">
+      <bpmn:outgoing>Flow_17a11jo</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_ConfirmOrder" name="Review and confirm order" implementation="##unspecified">
+      <bpmn:incoming>Flow_To_ConfirmOrder</bpmn:incoming>
+      <bpmn:outgoing>Flow_01vppj0</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:sequenceFlow id="Flow_17a11jo" sourceRef="StartEvent_Checkout" targetRef="Gateway_1nhn4f7" />
+    <bpmn:sequenceFlow id="Flow_0zkfq9z" sourceRef="Gateway_1nhn4f7" targetRef="Task_CheckStock" />
+    <bpmn:sequenceFlow id="Flow_0kxfotj" sourceRef="Task_AmendBasket" targetRef="Gateway_1nhn4f7" />
+    <bpmn:serviceTask id="Task_CheckStock" name="Check stock for each item" implementation="##WebService">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_0zkfq9z</bpmn:incoming>
+      <bpmn:outgoing>Flow_To_Gateway</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="Gateway_StockCheck" name="All items in stock?">
+      <bpmn:incoming>Flow_To_Gateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_123qy1x</bpmn:outgoing>
+      <bpmn:outgoing>Flow_1ry4lcq</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Task_InformCustomer" name="Inform customer of stock issue" implementation="##WebService">
+      <bpmn:incoming>Flow_123qy1x</bpmn:incoming>
+      <bpmn:outgoing>Flow_1hzu8qo</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_IdentifyProducers" name="Identify producers involved" implementation="##WebService">
+      <bpmn:incoming>Flow_1ry4lcq</bpmn:incoming>
+      <bpmn:outgoing>Flow_To_DetermineArrangements</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:userTask id="Task_AmendBasket" name="Amend basket" implementation="##unspecified">
+      <bpmn:incoming>Flow_1hzu8qo</bpmn:incoming>
+      <bpmn:outgoing>Flow_0kxfotj</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gateway_1nhn4f7">
+      <bpmn:incoming>Flow_17a11jo</bpmn:incoming>
+      <bpmn:incoming>Flow_0kxfotj</bpmn:incoming>
+      <bpmn:outgoing>Flow_0zkfq9z</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="Flow_01vppj0" sourceRef="Task_ConfirmOrder" targetRef="EndEvent_ReadyForPayment" />
+    <bpmn:serviceTask id="Task_DetermineArrangements" name="Determine delivery or collection arrangements" implementation="##WebService">
+      <bpmn:incoming>Flow_To_DetermineArrangements</bpmn:incoming>
+      <bpmn:outgoing>Flow_To_ConfirmOrder</bpmn:outgoing>
+    </bpmn:serviceTask>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_Process_Checkout">
+    <bpmndi:BPMNPlane id="BPMNPlane_Process_Checkout" bpmnElement="Collaboration_0k5d29a">
+      <bpmndi:BPMNShape id="Participant_13vaacy_di" bpmnElement="Participant_13vaacy" isHorizontal="true">
+        <dc:Bounds x="179" y="76" width="1010" height="502" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_0zkrqsw_di" bpmnElement="Lane_0zkrqsw" isHorizontal="true">
+        <dc:Bounds x="209" y="310" width="980" height="268" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_01jzsz8_di" bpmnElement="Lane_01jzsz8" isHorizontal="true">
+        <dc:Bounds x="209" y="76" width="980" height="234" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_ReadyForPayment_di" bpmnElement="EndEvent_ReadyForPayment">
+        <dc:Bounds x="1131" y="355" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1112" y="391" width="75" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_Checkout_di" bpmnElement="StartEvent_Checkout">
+        <dc:Bounds x="262" y="172" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="251" y="122" width="58" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ConfirmOrder_di" bpmnElement="Task_ConfirmOrder">
+        <dc:Bounds x="900" y="170" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_CheckStock_di" bpmnElement="Task_CheckStock">
+        <dc:Bounds x="400" y="360" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_StockCheck_di" bpmnElement="Gateway_StockCheck" isMarkerVisible="true">
+        <dc:Bounds x="545" y="375" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="527" y="351" width="89" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_InformCustomer_di" bpmnElement="Task_InformCustomer">
+        <dc:Bounds x="700" y="360" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_IdentifyProducers_di" bpmnElement="Task_IdentifyProducers">
+        <dc:Bounds x="700" y="466" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_AmendBasket_di" bpmnElement="Task_AmendBasket">
+        <dc:Bounds x="710" y="183" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_1nhn4f7_di" bpmnElement="Gateway_1nhn4f7" isMarkerVisible="true">
+        <dc:Bounds x="315" y="375" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_DetermineArrangements_di" bpmnElement="Task_DetermineArrangements">
+        <dc:Bounds x="900" y="466" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_To_ConfirmOrder_di" bpmnElement="Flow_To_ConfirmOrder">
+        <di:waypoint x="950" y="466" />
+        <di:waypoint x="950" y="250" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_To_DetermineArrangements_di" bpmnElement="Flow_To_DetermineArrangements">
+        <di:waypoint x="800" y="506" />
+        <di:waypoint x="900" y="506" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1ry4lcq_di" bpmnElement="Flow_1ry4lcq">
+        <di:waypoint x="570" y="425" />
+        <di:waypoint x="570" y="506" />
+        <di:waypoint x="700" y="506" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="626" y="489" width="18" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_To_Gateway_di" bpmnElement="Flow_To_Gateway">
+        <di:waypoint x="500" y="400" />
+        <di:waypoint x="545" y="400" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_123qy1x_di" bpmnElement="Flow_123qy1x">
+        <di:waypoint x="595" y="400" />
+        <di:waypoint x="700" y="400" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="665" y="382" width="15" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1hzu8qo_di" bpmnElement="Flow_1hzu8qo">
+        <di:waypoint x="750" y="360" />
+        <di:waypoint x="750" y="263" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_17a11jo_di" bpmnElement="Flow_17a11jo">
+        <di:waypoint x="280" y="208" />
+        <di:waypoint x="280" y="400" />
+        <di:waypoint x="315" y="400" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0zkfq9z_di" bpmnElement="Flow_0zkfq9z">
+        <di:waypoint x="365" y="400" />
+        <di:waypoint x="400" y="400" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0kxfotj_di" bpmnElement="Flow_0kxfotj">
+        <di:waypoint x="710" y="240" />
+        <di:waypoint x="340" y="240" />
+        <di:waypoint x="340" y="375" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_01vppj0_di" bpmnElement="Flow_01vppj0">
+        <di:waypoint x="1000" y="210" />
+        <di:waypoint x="1149" y="210" />
+        <di:waypoint x="1149" y="355" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
