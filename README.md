@@ -15,7 +15,7 @@ A customer buys products from one or more local producers in a single order. The
 ## Proposed functionalities
 
 1. **Checkout & Stock Validation** – covers the multi-vendor basket, stock checks at checkout, amending orders when stock is insufficient, grouping by producer with delivery or collection arrangements, and order confirmation.
-2. **Payment & Order Processing** – covers payment through a simulated external service, declined payments with retry, payment service unavailability, splitting the order by producer, inventory updates, producer notification and the 5% commission. *(Awaiting module team approval.)*
+2. **Payment & Order Processing** – covers payment through a simulated external service, declined payments with retry, payment service unavailability, splitting the order by producer, inventory updates, producer notification and the 5% commission.
 
 ## Team
 
