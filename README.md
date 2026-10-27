@@ -3,9 +3,10 @@
 UFCFTR-30-3 Distributed and Enterprise Software Development – Task 1
 Bristol Regional Food Network – Digital Marketplace
 
-**Project board:** https://live-team-oq9nzy44.atlassian.net/jira/software/projects/SCRUM/boards/1
+**Project board (Jira):** https://live-team-oq9nzy44.atlassian.net/jira/software/projects/SCRUM/boards/1
 **Current sprint:** Sprint 1 – Strategic Process Analysis and Project Setup (12 Oct – 29 Oct 2026)
 
+*Jira access is by invitation. Viewer access has been granted to the module team (Kun Wei, Khoa Phung and Dilshan Jayatilake).*
 ## Use case
 
 **Use Case 2: Customer Multi-Vendor Order, Checkout and Payment.**
@@ -34,11 +35,11 @@ A customer buys products from one or more local producers in a single order. The
 | `istar/` | i* Strategic Dependency and Strategic Rationale models (Sprint 2) |
 | `camunda/` | Executable processes, Forms and service tasks (Sprint 2 onwards) |
 | `docs/` | Analysis and sprint documents |
-| `project-management/` | Backlog and sprint plans |
+| `project-management/` | Sprint plans and Jira backlog screenshots |
 
 ## Key documents
 
-- [Product backlog](project-management/backlog.md)
 - [Sprint 1 plan](project-management/sprint-1-plan.md)
+- [Product backlog (Jira)](https://live-team-oq9nzy44.atlassian.net/jira/software/projects/SCRUM/boards/1/backlog)
 
 *AI was used in an assistive role throughout this document. It was reviewed by our team and changes were made.*
