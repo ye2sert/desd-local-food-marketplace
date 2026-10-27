@@ -34,7 +34,6 @@ A customer buys products from one or more local producers in a single order. The
 | `istar/` | i* Strategic Dependency and Strategic Rationale models (Sprint 2) |
 | `camunda/` | Executable processes, Forms and service tasks (Sprint 2 onwards) |
 | `docs/` | Analysis and sprint documents |
-| `docs/meetings/` | Meeting notes |
 | `project-management/` | Backlog and sprint plans |
 
 ## Key documents
