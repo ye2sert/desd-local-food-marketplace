@@ -4,7 +4,7 @@ UFCFTR-30-3 Distributed and Enterprise Software Development – Task 1
 Bristol Regional Food Network – Digital Marketplace
 
 **Project board (Jira):** https://live-team-oq9nzy44.atlassian.net/jira/software/projects/SCRUM/boards/1
-**Current sprint:** Sprint 1 – Strategic Process Analysis and Project Setup (12 Oct – 29 Oct 2026)
+**Current sprint:** Sprint 2 – i* models, operational BPMN and initial Camunda automation (29 Oct – 19 Nov 2026)
 
 *Jira access is by invitation. Viewer access has been granted to the module team (Kun Wei, Khoa Phung and Dilshan Jayatilake).*
 ## Use case
@@ -40,6 +40,7 @@ A customer buys products from one or more local producers in a single order. The
 ## Key documents
 
 - [Sprint 1 plan](project-management/sprint-1-plan.md)
+- [Sprint 2 plan](project-management/sprint-2-plan.md)
 - [Product backlog (Jira)](https://live-team-oq9nzy44.atlassian.net/jira/software/projects/SCRUM/boards/1/backlog)
 
 *AI was used in an assistive role throughout this document. It was reviewed by our team and changes were made.*
