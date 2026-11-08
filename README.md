@@ -33,9 +33,36 @@ A customer buys products from one or more local producers in a single order. The
 |---|---|
 | `bpmn/` | Strategic and operational BPMN models |
 | `istar/` | i* Strategic Dependency and Strategic Rationale models (Sprint 2) |
-| `camunda/` | Executable processes, Forms and service tasks (Sprint 2 onwards) |
+| `camunda/` | Executable processes, Forms and service tasks; `payment-service/` contains the simulated payment service worker (Sprint 2 onwards) |
 | `docs/` | Analysis and sprint documents |
 | `project-management/` | Sprint plans and Jira backlog screenshots |
+
+## Running locally
+
+We use **Camunda 8** for process automation. To run the processes on your own machine:
+
+### 1. Start Camunda
+1. Install **Java 21**.
+2. Download **Camunda 8 Run 8.10.9** for your OS ([download page](https://docs.camunda.io/docs/self-managed/quickstart/developer-quickstart/c8run/install-start/)) and extract it.
+3. In the extracted `c8run-8.10.9` folder, start Camunda with `./start.sh` (Windows: `.\c8run.exe start`). Stop it with `./shutdown.sh` (Windows: `.\c8run.exe stop`).
+4. Open **Operate** at http://localhost:8080/operate and **Tasklist** at http://localhost:8080/tasklist. Log in with `demo` / `demo`.
+
+### 2. Open and deploy processes
+1. Install **Camunda Desktop Modeler 5.52.0** ([download page](https://camunda.com/download/modeler/)).
+2. Open a `.bpmn` file from the `camunda/` folder.
+3. Click the **rocket icon** to deploy to the local **c8run** cluster (authentication: None), then the **play icon** to start an instance.
+
+### 3. Run the simulated payment service
+The payment service is a Node.js job worker that completes the "Process payment" service task (job type `payment-service`) and returns `paymentStatus = "success"`.
+
+1. Install **Node.js**.
+2. In a terminal:
+   ```bash
+   cd camunda/payment-service
+   npm install
+   node worker.js
+   ```
+3. Leave the worker running, then deploy and start `payment-test.bpmn`. The instance should complete in Operate with `paymentStatus` and `transactionId` variables.
 
 ## Key documents
 
