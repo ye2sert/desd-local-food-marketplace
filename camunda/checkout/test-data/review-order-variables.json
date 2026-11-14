@@ -1,0 +1,113 @@
+{
+  "basketId": "BASKET-1042",
+  "customerId": "CUST-207",
+  "items": [
+    {
+      "productId": "PRD-101",
+      "productName": "Seasonal vegetable box",
+      "producerId": "PROD-01",
+      "producerName": "Hollybush Farm",
+      "quantity": 1,
+      "unitPrice": 15.0
+    },
+    {
+      "productId": "PRD-102",
+      "productName": "Free-range eggs (12)",
+      "producerId": "PROD-01",
+      "producerName": "Hollybush Farm",
+      "quantity": 1,
+      "unitPrice": 4.2
+    },
+    {
+      "productId": "PRD-201",
+      "productName": "Mature cheddar 400g",
+      "producerId": "PROD-02",
+      "producerName": "Chew Valley Dairy",
+      "quantity": 2,
+      "unitPrice": 5.5
+    },
+    {
+      "productId": "PRD-202",
+      "productName": "Whole milk 2L",
+      "producerId": "PROD-02",
+      "producerName": "Chew Valley Dairy",
+      "quantity": 1,
+      "unitPrice": 1.8
+    },
+    {
+      "productId": "PRD-301",
+      "productName": "Sourdough loaf",
+      "producerId": "PROD-03",
+      "producerName": "Stokes Croft Bakery",
+      "quantity": 1,
+      "unitPrice": 4.25
+    }
+  ],
+  "producerOrders": [
+    {
+      "producerId": "PROD-01",
+      "producerName": "Hollybush Farm",
+      "items": [
+        {
+          "productId": "PRD-101",
+          "productName": "Seasonal vegetable box",
+          "producerId": "PROD-01",
+          "producerName": "Hollybush Farm",
+          "quantity": 1,
+          "unitPrice": 15.0
+        },
+        {
+          "productId": "PRD-102",
+          "productName": "Free-range eggs (12)",
+          "producerId": "PROD-01",
+          "producerName": "Hollybush Farm",
+          "quantity": 1,
+          "unitPrice": 4.2
+        }
+      ],
+      "subtotal": 19.2,
+      "deliveryMethod": "Home delivery"
+    },
+    {
+      "producerId": "PROD-02",
+      "producerName": "Chew Valley Dairy",
+      "items": [
+        {
+          "productId": "PRD-201",
+          "productName": "Mature cheddar 400g",
+          "producerId": "PROD-02",
+          "producerName": "Chew Valley Dairy",
+          "quantity": 2,
+          "unitPrice": 5.5
+        },
+        {
+          "productId": "PRD-202",
+          "productName": "Whole milk 2L",
+          "producerId": "PROD-02",
+          "producerName": "Chew Valley Dairy",
+          "quantity": 1,
+          "unitPrice": 1.8
+        }
+      ],
+      "subtotal": 12.8,
+      "deliveryMethod": "Collection from Chew Valley farm shop"
+    },
+    {
+      "producerId": "PROD-03",
+      "producerName": "Stokes Croft Bakery",
+      "items": [
+        {
+          "productId": "PRD-301",
+          "productName": "Sourdough loaf",
+          "producerId": "PROD-03",
+          "producerName": "Stokes Croft Bakery",
+          "quantity": 1,
+          "unitPrice": 4.25
+        }
+      ],
+      "subtotal": 4.25,
+      "deliveryMethod": "Home delivery"
+    }
+  ],
+  "orderTotal": 36.25
+}

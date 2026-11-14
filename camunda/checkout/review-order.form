@@ -1,0 +1,57 @@
+{
+  "id": "review-order",
+  "type": "default",
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.10.0",
+  "exporter": {
+    "name": "Camunda Web Modeler",
+    "version": "f127538"
+  },
+  "schemaVersion": 18,
+  "components": [
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "## Review and confirm your order\nBasket **{{basketId}}**. Please check your items, who supplies them and how each part will reach you."
+    },
+    {
+      "id": "Table_Basket",
+      "type": "table",
+      "label": "Your basket",
+      "dataSource": "=for i in items return {product: i.productName, producer: i.producerName, quantity: i.quantity, unitPrice: \"£\" + string(floor(i.unitPrice)) + \".\" + substring(string(100 + round half up(modulo(i.unitPrice * 100, 100), 0)), 2), lineTotal: \"£\" + string(floor(i.unitPrice * i.quantity)) + \".\" + substring(string(100 + round half up(modulo(i.unitPrice * i.quantity * 100, 100), 0)), 2)}",
+      "rowCount": 10,
+      "columns": [
+        { "label": "Product", "key": "product" },
+        { "label": "Producer", "key": "producer" },
+        { "label": "Quantity", "key": "quantity" },
+        { "label": "Unit price", "key": "unitPrice" },
+        { "label": "Line total", "key": "lineTotal" }
+      ]
+    },
+    {
+      "id": "Table_Producers",
+      "type": "table",
+      "label": "Your order by producer",
+      "dataSource": "=for o in producerOrders return {producer: o.producerName, delivery: o.deliveryMethod, subtotal: \"£\" + string(floor(o.subtotal)) + \".\" + substring(string(100 + round half up(modulo(o.subtotal * 100, 100), 0)), 2)}",
+      "rowCount": 10,
+      "columns": [
+        { "label": "Producer", "key": "producer" },
+        { "label": "Delivery or collection", "key": "delivery" },
+        { "label": "Subtotal", "key": "subtotal" }
+      ]
+    },
+    {
+      "id": "Text_OrderTotal",
+      "type": "text",
+      "text": "=\"### Order total: £\" + string(floor(orderTotal)) + \".\" + substring(string(100 + round half up(modulo(orderTotal * 100, 100), 0)), 2)"
+    },
+    {
+      "id": "Checkbox_OrderConfirmed",
+      "type": "checkbox",
+      "key": "orderConfirmed",
+      "label": "I have checked my order and want to confirm it",
+      "description": "Leave this unticked to go back and change your basket.",
+      "defaultValue": false
+    }
+  ]
+}
