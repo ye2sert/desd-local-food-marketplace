@@ -7,7 +7,7 @@
     <bpmn:sequenceFlow id="Flow_095eake" sourceRef="StartEvent_1" targetRef="Activity_1gzkgux" />
     <bpmn:serviceTask id="Activity_1gzkgux" name="Process Payment">
       <bpmn:extensionElements>
-        <zeebe:taskDefinition type="payment-service" />
+        <zeebe:taskDefinition type="request-payment" />
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_095eake</bpmn:incoming>
       <bpmn:outgoing>Flow_1y15ztq</bpmn:outgoing>
