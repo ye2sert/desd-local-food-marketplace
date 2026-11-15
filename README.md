@@ -53,8 +53,7 @@ We use **Camunda 8** for process automation. To run the processes on your own ma
 3. Click the **rocket icon** to deploy to the local **c8run** cluster (authentication: None), then the **play icon** to start an instance.
 
 ### 3. Run the simulated payment service
-The payment service is a Node.js job worker that completes the "Process payment" service task (job type `payment-service`) and returns `paymentStatus = "success"`.
-
+The payment service is a Node.js job worker that completes the "Request payment" service task (job type `request-payment`) and returns `paymentStatus = "SUCCESS"` and a `transactionId`.
 1. Install **Node.js**.
 2. In a terminal:
    ```bash
