@@ -1,0 +1,2070 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:modeler="http://camunda.org/schema/modeler/1.0" xmlns:bioc="http://bpmn.io/schema/bioc/1.0" id="Definitions_UC2" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Web Modeler" exporterVersion="64767e4" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.10.0">
+  <bpmn:message id="Message_Basket" name="Basket" />
+  <bpmn:message id="Message_OrderSummary" name="Order summary" />
+  <bpmn:message id="Message_ItemsUnavailable" name="Items unavailable" />
+  <bpmn:message id="Message_RevisedBasket" name="Revised basket" />
+  <bpmn:message id="Message_CancelOrder" name="Cancel order" />
+  <bpmn:message id="Message_PaymentDetails" name="Payment details" />
+  <bpmn:message id="Message_OrderConfirmation" name="Order confirmation" />
+  <bpmn:message id="Message_PaymentPending" name="Payment pending" />
+  <bpmn:message id="Message_PaymentDeclined" name="Payment declined" />
+  <bpmn:message id="Message_DeliveryTime" name="Delivery time" />
+  <bpmn:message id="Message_CustomerDecision" name="Customer decision" />
+  <bpmn:message id="Message_ReadyForHandover" name="Ready for handover" />
+  <bpmn:message id="Message_HandOverDone" name="Hand-over done" />
+  <bpmn:message id="Message_OrderNotice" name="Order notice" />
+  <bpmn:message id="Message_ProducerConfirms" name="Producer confirms" />
+  <bpmn:message id="Message_PaymentRequest" name="Payment request" />
+  <bpmn:message id="Message_GatewayApproved" name="Gateway approved" />
+  <bpmn:message id="Message_GatewayDeclined" name="Gateway declined" />
+  <bpmn:message id="Message_StatusEnquiry" name="Status enquiry" />
+  <bpmn:message id="Message_StatusResponse" name="Status response" />
+  <bpmn:error id="Error_GatewayNotAnswering" name="GatewayNotAnswering" errorCode="GATEWAYNOTANSWERING" />
+  <bpmn:collaboration id="Collaboration_UC2" name="BPMN sprint 2">
+    <bpmn:participant id="Participant_Customer" name="Customer" processRef="Process_Customer">
+      <bpmn:documentation>Customer of the Bristol Regional Food Network marketplace (UC2).</bpmn:documentation>
+    </bpmn:participant>
+    <bpmn:participant id="Participant_Marketplace" name="Local Food Marketplace" processRef="Process_Marketplace" />
+    <bpmn:participant id="Participant_Gateway" name="Payment gateway (sandbox)" processRef="Process_Gateway">
+      <bpmn:documentation>External or simulated payment service. UC2 and the brief: use a sandbox, never a live payment system.</bpmn:documentation>
+    </bpmn:participant>
+    <bpmn:participant id="Participant_Producers" name="Local producers (each of the 40 SMEs)" processRef="Process_Producers">
+      <bpmn:documentation>Producers differ in technical ability: some only use email and phone (case study). They need at least 48 hours' notice.</bpmn:documentation>
+      <bpmn:participantMultiplicity minimum="1" maximum="40" />
+    </bpmn:participant>
+    <bpmn:messageFlow id="Message_85_Basket" sourceRef="C_Send" targetRef="M_Start" />
+    <bpmn:messageFlow id="Message_86_ItemsUnavailable" sourceRef="M_Short" targetRef="C_Unav" />
+    <bpmn:messageFlow id="Message_87_OrderSummary" sourceRef="M_Ident" targetRef="C_Sum" />
+    <bpmn:messageFlow id="Message_88_RevisedBasket" name="Revised basket" sourceRef="C_Resub" targetRef="M_Rev" />
+    <bpmn:messageFlow id="Message_89_PurchaseConfirmed" name="Purchase confirmed" sourceRef="C_Confirm" targetRef="M_Dec" />
+    <bpmn:messageFlow id="Message_90_CancelOrder" sourceRef="C_Abandon" targetRef="M_Dec" />
+    <bpmn:messageFlow id="Message_91_PaymentDetails" name="Payment details" sourceRef="C_Pay" targetRef="M_Rcv" />
+    <bpmn:messageFlow id="Message_92_OrderConfirmation" sourceRef="M_Conf2" targetRef="C_OrdConf" />
+    <bpmn:messageFlow id="Message_93_PaymentDeclined" sourceRef="M_Decl" targetRef="C_DeclC" />
+    <bpmn:messageFlow id="Message_94_PaymentPending" sourceRef="M_Pend" targetRef="C_PendC" />
+    <bpmn:messageFlow id="Message_95_DeliveryTime" sourceRef="M_SendHO" targetRef="C_DelivC" />
+    <bpmn:messageFlow id="Message_96_PaymentRequest" sourceRef="M_Ask" targetRef="G_Start" />
+    <bpmn:messageFlow id="Message_97_GatewayApproved" sourceRef="G_Ok" targetRef="M_Ask" />
+    <bpmn:messageFlow id="Message_98_GatewayDeclined" sourceRef="G_No" targetRef="M_Ask" />
+    <bpmn:messageFlow id="Message_99_StatusEnquiry" sourceRef="M_Chk" targetRef="G_SStart" />
+    <bpmn:messageFlow id="Message_100_StatusResponse" sourceRef="G_SEnd" targetRef="M_Chk" />
+    <bpmn:messageFlow id="Message_101_OrderNotice" sourceRef="M_Notify" targetRef="P_Start" />
+    <bpmn:messageFlow id="Message_102_ProducerConfirms" name="Producer confirms" sourceRef="P_Ack" targetRef="M_Notify" />
+    <bpmn:messageFlow id="Message_103_ReadyForHandover" sourceRef="P_Ready" targetRef="M_RR" />
+    <bpmn:messageFlow id="Message_104_HandOverDone" sourceRef="P_End" targetRef="M_RHO" />
+  </bpmn:collaboration>
+  <bpmn:process id="Process_Customer" name="Customer" isExecutable="false">
+    <bpmn:startEvent id="C_Start" name="Wants local food">
+      <bpmn:outgoing>Flow_1_C_Start_To_C_Browse</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="C_Browse" name="Browse or search products">
+      <bpmn:documentation>UC2: the customer browses or searches the marketplace.</bpmn:documentation>
+      <bpmn:incoming>Flow_1_C_Start_To_C_Browse</bpmn:incoming>
+      <bpmn:outgoing>Flow_2_C_Browse_To_C_Basket</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="C_Basket" name="Add products to basket">
+      <bpmn:documentation>UC2: products from ONE OR MORE producers go in one basket.</bpmn:documentation>
+      <bpmn:incoming>Flow_2_C_Browse_To_C_Basket</bpmn:incoming>
+      <bpmn:outgoing>Flow_3_C_Basket_To_C_Send</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:sendTask id="C_Send" name="Go to checkout">
+      <bpmn:incoming>Flow_3_C_Basket_To_C_Send</bpmn:incoming>
+      <bpmn:outgoing>Flow_4_C_Send_To_C_JS</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:exclusiveGateway id="C_JS" name="">
+      <bpmn:incoming>Flow_4_C_Send_To_C_JS</bpmn:incoming>
+      <bpmn:incoming>Flow_27_C_Resub_To_C_JS</bpmn:incoming>
+      <bpmn:outgoing>Flow_5_C_JS_To_C_EG</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:eventBasedGateway id="C_EG" name="Stock result">
+      <bpmn:incoming>Flow_5_C_JS_To_C_EG</bpmn:incoming>
+      <bpmn:outgoing>Flow_6_C_EG_To_C_Sum</bpmn:outgoing>
+      <bpmn:outgoing>Flow_7_C_EG_To_C_Unav</bpmn:outgoing>
+    </bpmn:eventBasedGateway>
+    <bpmn:intermediateCatchEvent id="C_Sum" name="Order summary">
+      <bpmn:incoming>Flow_6_C_EG_To_C_Sum</bpmn:incoming>
+      <bpmn:outgoing>Flow_10_C_Sum_To_C_Review</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="C_Sum_def" messageRef="Message_OrderSummary" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="C_Unav" name="Items unavailable">
+      <bpmn:incoming>Flow_7_C_EG_To_C_Unav</bpmn:incoming>
+      <bpmn:outgoing>Flow_8_C_Unav_To_C_Amend</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="C_Unav_def" messageRef="Message_ItemsUnavailable" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="C_Amend" name="Amend basket">
+      <bpmn:documentation>UC2: if an item is unavailable the customer is told and asked to amend the order.</bpmn:documentation>
+      <bpmn:incoming>Flow_8_C_Unav_To_C_Amend</bpmn:incoming>
+      <bpmn:outgoing>Flow_9_C_Amend_To_C_Resub</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:sendTask id="C_Resub" name="Resubmit basket">
+      <bpmn:incoming>Flow_9_C_Amend_To_C_Resub</bpmn:incoming>
+      <bpmn:outgoing>Flow_27_C_Resub_To_C_JS</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:userTask id="C_Review" name="Review order">
+      <bpmn:documentation>UC2: the customer reviews the order, the producer split and the delivery or collection arrangements.</bpmn:documentation>
+      <bpmn:incoming>Flow_10_C_Sum_To_C_Review</bpmn:incoming>
+      <bpmn:outgoing>Flow_11_C_Review_To_C_Conf</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="C_Conf" name="Confirm?">
+      <bpmn:incoming>Flow_11_C_Review_To_C_Conf</bpmn:incoming>
+      <bpmn:outgoing>Flow_12_C_Conf_To_C_Confirm</bpmn:outgoing>
+      <bpmn:outgoing>Flow_13_C_Conf_To_C_Abandon</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sendTask id="C_Confirm" name="Confirm purchase">
+      <bpmn:incoming>Flow_12_C_Conf_To_C_Confirm</bpmn:incoming>
+      <bpmn:outgoing>Flow_14_C_Confirm_To_C_JP</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="C_Abandon" name="Checkout stopped">
+      <bpmn:incoming>Flow_13_C_Conf_To_C_Abandon</bpmn:incoming>
+      <bpmn:messageEventDefinition id="C_Abandon_def" messageRef="Message_CancelOrder" />
+    </bpmn:endEvent>
+    <bpmn:exclusiveGateway id="C_JP" name="">
+      <bpmn:incoming>Flow_14_C_Confirm_To_C_JP</bpmn:incoming>
+      <bpmn:incoming>Flow_28_C_New_To_C_JP</bpmn:incoming>
+      <bpmn:outgoing>Flow_15_C_JP_To_C_Pay</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sendTask id="C_Pay" name="Enter payment details">
+      <bpmn:incoming>Flow_15_C_JP_To_C_Pay</bpmn:incoming>
+      <bpmn:outgoing>Flow_16_C_Pay_To_C_EG2</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:eventBasedGateway id="C_EG2" name="Payment result">
+      <bpmn:incoming>Flow_16_C_Pay_To_C_EG2</bpmn:incoming>
+      <bpmn:outgoing>Flow_17_C_EG2_To_C_OrdConf</bpmn:outgoing>
+      <bpmn:outgoing>Flow_18_C_EG2_To_C_PendC</bpmn:outgoing>
+      <bpmn:outgoing>Flow_19_C_EG2_To_C_DeclC</bpmn:outgoing>
+    </bpmn:eventBasedGateway>
+    <bpmn:intermediateCatchEvent id="C_OrdConf" name="Order confirmed">
+      <bpmn:incoming>Flow_17_C_EG2_To_C_OrdConf</bpmn:incoming>
+      <bpmn:outgoing>Flow_24_C_OrdConf_To_C_DelivC</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="C_OrdConf_def" messageRef="Message_OrderConfirmation" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="C_PendC" name="Payment is being checked">
+      <bpmn:incoming>Flow_18_C_EG2_To_C_PendC</bpmn:incoming>
+      <bpmn:outgoing>Flow_20_C_PendC_To_C_PendEnd</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="C_PendC_def" messageRef="Message_PaymentPending" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:endEvent id="C_PendEnd" name="Waiting for payment update">
+      <bpmn:incoming>Flow_20_C_PendC_To_C_PendEnd</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:intermediateCatchEvent id="C_DeclC" name="Payment declined">
+      <bpmn:incoming>Flow_19_C_EG2_To_C_DeclC</bpmn:incoming>
+      <bpmn:outgoing>Flow_21_C_DeclC_To_C_Try</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="C_DeclC_def" messageRef="Message_PaymentDeclined" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:exclusiveGateway id="C_Try" name="Try another method?">
+      <bpmn:incoming>Flow_21_C_DeclC_To_C_Try</bpmn:incoming>
+      <bpmn:outgoing>Flow_22_C_Try_To_C_New</bpmn:outgoing>
+      <bpmn:outgoing>Flow_23_C_Try_To_C_Abn</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="C_New" name="Choose another payment method">
+      <bpmn:documentation>Teacher feedback and UC2: a declined payment gives the customer another way to pay. The basket and order are kept. Nothing restarts.</bpmn:documentation>
+      <bpmn:incoming>Flow_22_C_Try_To_C_New</bpmn:incoming>
+      <bpmn:outgoing>Flow_28_C_New_To_C_JP</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="C_Abn" name="Payment abandoned">
+      <bpmn:incoming>Flow_23_C_Try_To_C_Abn</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:intermediateCatchEvent id="C_DelivC" name="Delivery or collection time">
+      <bpmn:incoming>Flow_24_C_OrdConf_To_C_DelivC</bpmn:incoming>
+      <bpmn:outgoing>Flow_25_C_DelivC_To_C_Receive</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="C_DelivC_def" messageRef="Message_DeliveryTime" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="C_Receive" name="Receive or collect the food">
+      <bpmn:incoming>Flow_25_C_DelivC_To_C_Receive</bpmn:incoming>
+      <bpmn:outgoing>Flow_26_C_Receive_To_C_End</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="C_End" name="Order received">
+      <bpmn:incoming>Flow_26_C_Receive_To_C_End</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1_C_Start_To_C_Browse" sourceRef="C_Start" targetRef="C_Browse" />
+    <bpmn:sequenceFlow id="Flow_2_C_Browse_To_C_Basket" sourceRef="C_Browse" targetRef="C_Basket" />
+    <bpmn:sequenceFlow id="Flow_3_C_Basket_To_C_Send" sourceRef="C_Basket" targetRef="C_Send" />
+    <bpmn:sequenceFlow id="Flow_4_C_Send_To_C_JS" sourceRef="C_Send" targetRef="C_JS" />
+    <bpmn:sequenceFlow id="Flow_5_C_JS_To_C_EG" sourceRef="C_JS" targetRef="C_EG" />
+    <bpmn:sequenceFlow id="Flow_6_C_EG_To_C_Sum" sourceRef="C_EG" targetRef="C_Sum" />
+    <bpmn:sequenceFlow id="Flow_7_C_EG_To_C_Unav" sourceRef="C_EG" targetRef="C_Unav" />
+    <bpmn:sequenceFlow id="Flow_8_C_Unav_To_C_Amend" sourceRef="C_Unav" targetRef="C_Amend" />
+    <bpmn:sequenceFlow id="Flow_9_C_Amend_To_C_Resub" sourceRef="C_Amend" targetRef="C_Resub" />
+    <bpmn:sequenceFlow id="Flow_10_C_Sum_To_C_Review" sourceRef="C_Sum" targetRef="C_Review" />
+    <bpmn:sequenceFlow id="Flow_11_C_Review_To_C_Conf" sourceRef="C_Review" targetRef="C_Conf" />
+    <bpmn:sequenceFlow id="Flow_12_C_Conf_To_C_Confirm" name="Yes" sourceRef="C_Conf" targetRef="C_Confirm">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=purchaseConfirmed = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_13_C_Conf_To_C_Abandon" name="No" sourceRef="C_Conf" targetRef="C_Abandon">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=purchaseConfirmed = false</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_14_C_Confirm_To_C_JP" sourceRef="C_Confirm" targetRef="C_JP" />
+    <bpmn:sequenceFlow id="Flow_15_C_JP_To_C_Pay" sourceRef="C_JP" targetRef="C_Pay" />
+    <bpmn:sequenceFlow id="Flow_16_C_Pay_To_C_EG2" sourceRef="C_Pay" targetRef="C_EG2" />
+    <bpmn:sequenceFlow id="Flow_17_C_EG2_To_C_OrdConf" sourceRef="C_EG2" targetRef="C_OrdConf" />
+    <bpmn:sequenceFlow id="Flow_18_C_EG2_To_C_PendC" sourceRef="C_EG2" targetRef="C_PendC" />
+    <bpmn:sequenceFlow id="Flow_19_C_EG2_To_C_DeclC" sourceRef="C_EG2" targetRef="C_DeclC" />
+    <bpmn:sequenceFlow id="Flow_20_C_PendC_To_C_PendEnd" sourceRef="C_PendC" targetRef="C_PendEnd" />
+    <bpmn:sequenceFlow id="Flow_21_C_DeclC_To_C_Try" sourceRef="C_DeclC" targetRef="C_Try" />
+    <bpmn:sequenceFlow id="Flow_22_C_Try_To_C_New" name="Yes" sourceRef="C_Try" targetRef="C_New">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=retryPayment = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_23_C_Try_To_C_Abn" name="No" sourceRef="C_Try" targetRef="C_Abn">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=retryPayment = false</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_24_C_OrdConf_To_C_DelivC" sourceRef="C_OrdConf" targetRef="C_DelivC" />
+    <bpmn:sequenceFlow id="Flow_25_C_DelivC_To_C_Receive" sourceRef="C_DelivC" targetRef="C_Receive" />
+    <bpmn:sequenceFlow id="Flow_26_C_Receive_To_C_End" sourceRef="C_Receive" targetRef="C_End" />
+    <bpmn:sequenceFlow id="Flow_27_C_Resub_To_C_JS" sourceRef="C_Resub" targetRef="C_JS" />
+    <bpmn:sequenceFlow id="Flow_28_C_New_To_C_JP" sourceRef="C_New" targetRef="C_JP" />
+  </bpmn:process>
+  <bpmn:process id="Process_Marketplace" name="Local Food Marketplace" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_Process_Marketplace">
+      <bpmn:lane id="Lane_Checkout" name="Checkout and stock">
+        <bpmn:flowNodeRef>M_Start</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_J1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_Check</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_Stk</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_Short</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_Rev</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_Ident</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_Dec</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_Conf</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_Cancelled</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Orders" name="Orders and payment">
+        <bpmn:flowNodeRef>M_Order</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_JR</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_Rcv</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_RcvT</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_Close</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_ClosedEnd</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_Ask</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_AskErr</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_JA</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_Appr</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_Conf2</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_Upd</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_Decl</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_Chk</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_Ans</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_Pend</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_PendEnd</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Delivery" name="Delivery and collection">
+        <bpmn:flowNodeRef>M_Notify</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_RR</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_HG</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_Del</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_Col</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_Mrg</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_SendHO</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_RHO</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_Rec</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_End</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="M_Start" name="Basket received">
+      <bpmn:outgoing>Flow_31_M_Start_To_M_J1</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="M_Start_def" messageRef="Message_Basket" />
+    </bpmn:startEvent>
+    <bpmn:exclusiveGateway id="M_J1" name="">
+      <bpmn:incoming>Flow_31_M_Start_To_M_J1</bpmn:incoming>
+      <bpmn:incoming>Flow_67_M_Rev_To_M_J1</bpmn:incoming>
+      <bpmn:outgoing>Flow_32_M_J1_To_M_Check</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="M_Check" name="Check basket and stock">
+      <bpmn:documentation>Service task: checks every item against the stock records.</bpmn:documentation>
+      <bpmn:incoming>Flow_32_M_J1_To_M_Check</bpmn:incoming>
+      <bpmn:outgoing>Flow_33_M_Check_To_M_Stk</bpmn:outgoing>
+      <bpmn:dataInputAssociation id="DataAssoc_29">
+        <bpmn:sourceRef>DS_Stock</bpmn:sourceRef>
+      </bpmn:dataInputAssociation>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="M_Stk" name="In stock?">
+      <bpmn:incoming>Flow_33_M_Check_To_M_Stk</bpmn:incoming>
+      <bpmn:outgoing>Flow_34_M_Stk_To_M_Ident</bpmn:outgoing>
+      <bpmn:outgoing>Flow_35_M_Stk_To_M_Short</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sendTask id="M_Short" name="Tell customer items are short">
+      <bpmn:incoming>Flow_35_M_Stk_To_M_Short</bpmn:incoming>
+      <bpmn:outgoing>Flow_36_M_Short_To_M_Rev</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:receiveTask id="M_Rev" name="Receive revised basket" messageRef="Message_RevisedBasket">
+      <bpmn:incoming>Flow_36_M_Short_To_M_Rev</bpmn:incoming>
+      <bpmn:outgoing>Flow_67_M_Rev_To_M_J1</bpmn:outgoing>
+    </bpmn:receiveTask>
+    <bpmn:subProcess id="M_Ident" name="Identify producers and delivery options">
+      <bpmn:documentation>UC2: the system identifies the producers involved and determines delivery or collection arrangements. Case study: producers need at least 48 hours' notice. Drill down for the steps.</bpmn:documentation>
+      <bpmn:incoming>Flow_34_M_Stk_To_M_Ident</bpmn:incoming>
+      <bpmn:outgoing>Flow_37_M_Ident_To_M_Dec</bpmn:outgoing>
+      <bpmn:startEvent id="M_Ident__s" name="Stock available">
+        <bpmn:outgoing>Flow_105_M_Ident__s_To_M_Ident__p</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:serviceTask id="M_Ident__p" name="Identify the producers involved">
+        <bpmn:incoming>Flow_105_M_Ident__s_To_M_Ident__p</bpmn:incoming>
+        <bpmn:outgoing>Flow_106_M_Ident__p_To_M_Ident__d</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:serviceTask id="M_Ident__d" name="Work out delivery or collection for each producer">
+        <bpmn:incoming>Flow_106_M_Ident__p_To_M_Ident__d</bpmn:incoming>
+        <bpmn:outgoing>Flow_107_M_Ident__d_To_M_Ident__n</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:serviceTask id="M_Ident__n" name="Check the 48 hours&#39; notice can be met">
+        <bpmn:incoming>Flow_107_M_Ident__d_To_M_Ident__n</bpmn:incoming>
+        <bpmn:outgoing>Flow_108_M_Ident__n_To_M_Ident__o</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:serviceTask id="M_Ident__o" name="Prepare the order summary and options">
+        <bpmn:incoming>Flow_108_M_Ident__n_To_M_Ident__o</bpmn:incoming>
+        <bpmn:outgoing>Flow_109_M_Ident__o_To_M_Ident__e</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:endEvent id="M_Ident__e" name="Options ready for customer">
+        <bpmn:incoming>Flow_109_M_Ident__o_To_M_Ident__e</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="Flow_105_M_Ident__s_To_M_Ident__p" sourceRef="M_Ident__s" targetRef="M_Ident__p" />
+      <bpmn:sequenceFlow id="Flow_106_M_Ident__p_To_M_Ident__d" sourceRef="M_Ident__p" targetRef="M_Ident__d" />
+      <bpmn:sequenceFlow id="Flow_107_M_Ident__d_To_M_Ident__n" sourceRef="M_Ident__d" targetRef="M_Ident__n" />
+      <bpmn:sequenceFlow id="Flow_108_M_Ident__n_To_M_Ident__o" sourceRef="M_Ident__n" targetRef="M_Ident__o" />
+      <bpmn:sequenceFlow id="Flow_109_M_Ident__o_To_M_Ident__e" sourceRef="M_Ident__o" targetRef="M_Ident__e" />
+    </bpmn:subProcess>
+    <bpmn:receiveTask id="M_Dec" name="Receive customer decision" messageRef="Message_CustomerDecision">
+      <bpmn:incoming>Flow_37_M_Ident_To_M_Dec</bpmn:incoming>
+      <bpmn:outgoing>Flow_38_M_Dec_To_M_Conf</bpmn:outgoing>
+    </bpmn:receiveTask>
+    <bpmn:exclusiveGateway id="M_Conf" name="Confirmed?">
+      <bpmn:incoming>Flow_38_M_Dec_To_M_Conf</bpmn:incoming>
+      <bpmn:outgoing>Flow_39_M_Conf_To_M_Cancelled</bpmn:outgoing>
+      <bpmn:outgoing>Flow_40_M_Conf_To_M_Order</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="M_Cancelled" name="Checkout cancelled">
+      <bpmn:incoming>Flow_39_M_Conf_To_M_Cancelled</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:subProcess id="M_Order" name="Create and split order">
+      <bpmn:documentation>UC2: the system creates the overall marketplace order and separates it into producer-specific order elements. The order ID is also the correlation ID for every message that follows (Week 8).</bpmn:documentation>
+      <bpmn:incoming>Flow_40_M_Conf_To_M_Order</bpmn:incoming>
+      <bpmn:outgoing>Flow_41_M_Order_To_M_JR</bpmn:outgoing>
+      <bpmn:dataOutputAssociation id="DataAssoc_30">
+        <bpmn:targetRef>DS_Orders</bpmn:targetRef>
+      </bpmn:dataOutputAssociation>
+      <bpmn:startEvent id="M_Order__s" name="Purchase confirmed">
+        <bpmn:outgoing>Flow_110_M_Order__s_To_M_Order__o</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:serviceTask id="M_Order__o" name="Create the marketplace order">
+        <bpmn:incoming>Flow_110_M_Order__s_To_M_Order__o</bpmn:incoming>
+        <bpmn:outgoing>Flow_111_M_Order__o_To_M_Order__sp</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:serviceTask id="M_Order__sp" name="Split into producer-specific orders">
+        <bpmn:incoming>Flow_111_M_Order__o_To_M_Order__sp</bpmn:incoming>
+        <bpmn:outgoing>Flow_112_M_Order__sp_To_M_Order__e</bpmn:outgoing>
+        <bpmn:multiInstanceLoopCharacteristics />
+      </bpmn:serviceTask>
+      <bpmn:endEvent id="M_Order__e" name="Order ready for payment">
+        <bpmn:incoming>Flow_112_M_Order__sp_To_M_Order__e</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="Flow_110_M_Order__s_To_M_Order__o" sourceRef="M_Order__s" targetRef="M_Order__o" />
+      <bpmn:sequenceFlow id="Flow_111_M_Order__o_To_M_Order__sp" sourceRef="M_Order__o" targetRef="M_Order__sp" />
+      <bpmn:sequenceFlow id="Flow_112_M_Order__sp_To_M_Order__e" sourceRef="M_Order__sp" targetRef="M_Order__e" />
+    </bpmn:subProcess>
+    <bpmn:exclusiveGateway id="M_JR" name="">
+      <bpmn:incoming>Flow_41_M_Order_To_M_JR</bpmn:incoming>
+      <bpmn:incoming>Flow_68_M_Decl_To_M_JR</bpmn:incoming>
+      <bpmn:outgoing>Flow_42_M_JR_To_M_Rcv</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:receiveTask id="M_Rcv" name="Receive payment details" messageRef="Message_PaymentDetails">
+      <bpmn:documentation>Waits for the customer's payment details. The same task is used again after a decline, so the customer can pay another way without restarting. ASSUMPTION: the 1 day timer closes the unpaid order. The brief gives no duration; the group must agree one (Week 9 cancel timer).</bpmn:documentation>
+      <bpmn:incoming>Flow_42_M_JR_To_M_Rcv</bpmn:incoming>
+      <bpmn:outgoing>Flow_43_M_Rcv_To_M_Ask</bpmn:outgoing>
+    </bpmn:receiveTask>
+    <bpmn:boundaryEvent id="M_RcvT" name="After 1 day (assumed)" attachedToRef="M_Rcv">
+      <bpmn:outgoing>Flow_50_M_RcvT_To_M_Close</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="M_RcvT_def">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT24H</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:serviceTask id="M_Close" name="Close the unpaid order">
+      <bpmn:incoming>Flow_50_M_RcvT_To_M_Close</bpmn:incoming>
+      <bpmn:outgoing>Flow_51_M_Close_To_M_ClosedEnd</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="M_ClosedEnd" name="Order closed unpaid">
+      <bpmn:incoming>Flow_51_M_Close_To_M_ClosedEnd</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:subProcess id="M_Ask" name="Ask gateway to take payment">
+      <bpmn:documentation>UC2 and Week 8: payment goes to the sandbox gateway. Drill down: wait for an answer, 30 second timeout (ASSUMPTION, duration not in the brief), retry with the SAME payment key (idempotency). If the gateway never answers, an error leads to a payment status check, not to a dead end.</bpmn:documentation>
+      <bpmn:incoming>Flow_43_M_Rcv_To_M_Ask</bpmn:incoming>
+      <bpmn:outgoing>Flow_44_M_Ask_To_M_JA</bpmn:outgoing>
+      <bpmn:startEvent id="M_Ask__s" name="Payment details received">
+        <bpmn:outgoing>Flow_113_M_Ask__s_To_M_Ask__j</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:exclusiveGateway id="M_Ask__j" name="">
+        <bpmn:incoming>Flow_113_M_Ask__s_To_M_Ask__j</bpmn:incoming>
+        <bpmn:incoming>Flow_124_M_Ask__w_To_M_Ask__j</bpmn:incoming>
+        <bpmn:outgoing>Flow_114_M_Ask__j_To_M_Ask__send</bpmn:outgoing>
+      </bpmn:exclusiveGateway>
+      <bpmn:sendTask id="M_Ask__send" name="Send payment request with a payment key">
+        <bpmn:incoming>Flow_114_M_Ask__j_To_M_Ask__send</bpmn:incoming>
+        <bpmn:outgoing>Flow_115_M_Ask__send_To_M_Ask__eg</bpmn:outgoing>
+      </bpmn:sendTask>
+      <bpmn:eventBasedGateway id="M_Ask__eg" name="Gateway answer?">
+        <bpmn:incoming>Flow_115_M_Ask__send_To_M_Ask__eg</bpmn:incoming>
+        <bpmn:outgoing>Flow_116_M_Ask__eg_To_M_Ask__ok</bpmn:outgoing>
+        <bpmn:outgoing>Flow_118_M_Ask__eg_To_M_Ask__no</bpmn:outgoing>
+        <bpmn:outgoing>Flow_120_M_Ask__eg_To_M_Ask__ct</bpmn:outgoing>
+      </bpmn:eventBasedGateway>
+      <bpmn:intermediateCatchEvent id="M_Ask__ok" name="Gateway approved">
+        <bpmn:incoming>Flow_116_M_Ask__eg_To_M_Ask__ok</bpmn:incoming>
+        <bpmn:outgoing>Flow_117_M_Ask__ok_To_M_Ask__eok</bpmn:outgoing>
+        <bpmn:messageEventDefinition id="M_Ask__ok_def" messageRef="Message_GatewayApproved" />
+      </bpmn:intermediateCatchEvent>
+      <bpmn:endEvent id="M_Ask__eok" name="Approved">
+        <bpmn:incoming>Flow_117_M_Ask__ok_To_M_Ask__eok</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:intermediateCatchEvent id="M_Ask__no" name="Gateway declined">
+        <bpmn:incoming>Flow_118_M_Ask__eg_To_M_Ask__no</bpmn:incoming>
+        <bpmn:outgoing>Flow_119_M_Ask__no_To_M_Ask__eno</bpmn:outgoing>
+        <bpmn:messageEventDefinition id="M_Ask__no_def" messageRef="Message_GatewayDeclined" />
+      </bpmn:intermediateCatchEvent>
+      <bpmn:endEvent id="M_Ask__eno" name="Declined">
+        <bpmn:incoming>Flow_119_M_Ask__no_To_M_Ask__eno</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:intermediateCatchEvent id="M_Ask__ct" name="30 seconds, no answer (assumed)">
+        <bpmn:incoming>Flow_120_M_Ask__eg_To_M_Ask__ct</bpmn:incoming>
+        <bpmn:outgoing>Flow_121_M_Ask__ct_To_M_Ask__g</bpmn:outgoing>
+        <bpmn:timerEventDefinition id="M_Ask__ct_def">
+          <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT30S</bpmn:timeDuration>
+        </bpmn:timerEventDefinition>
+      </bpmn:intermediateCatchEvent>
+      <bpmn:exclusiveGateway id="M_Ask__g" name="Tries left?">
+        <bpmn:incoming>Flow_121_M_Ask__ct_To_M_Ask__g</bpmn:incoming>
+        <bpmn:outgoing>Flow_122_M_Ask__g_To_M_Ask__w</bpmn:outgoing>
+        <bpmn:outgoing>Flow_123_M_Ask__g_To_M_Ask__ee</bpmn:outgoing>
+      </bpmn:exclusiveGateway>
+      <bpmn:serviceTask id="M_Ask__w" name="Wait, then ask again with the SAME payment key">
+        <bpmn:incoming>Flow_122_M_Ask__g_To_M_Ask__w</bpmn:incoming>
+        <bpmn:outgoing>Flow_124_M_Ask__w_To_M_Ask__j</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:endEvent id="M_Ask__ee" name="Gateway not answering">
+        <bpmn:incoming>Flow_123_M_Ask__g_To_M_Ask__ee</bpmn:incoming>
+        <bpmn:errorEventDefinition id="M_Ask__ee_def" errorRef="Error_GatewayNotAnswering" />
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="Flow_113_M_Ask__s_To_M_Ask__j" sourceRef="M_Ask__s" targetRef="M_Ask__j" />
+      <bpmn:sequenceFlow id="Flow_114_M_Ask__j_To_M_Ask__send" sourceRef="M_Ask__j" targetRef="M_Ask__send" />
+      <bpmn:sequenceFlow id="Flow_115_M_Ask__send_To_M_Ask__eg" sourceRef="M_Ask__send" targetRef="M_Ask__eg" />
+      <bpmn:sequenceFlow id="Flow_116_M_Ask__eg_To_M_Ask__ok" sourceRef="M_Ask__eg" targetRef="M_Ask__ok" />
+      <bpmn:sequenceFlow id="Flow_117_M_Ask__ok_To_M_Ask__eok" sourceRef="M_Ask__ok" targetRef="M_Ask__eok" />
+      <bpmn:sequenceFlow id="Flow_118_M_Ask__eg_To_M_Ask__no" sourceRef="M_Ask__eg" targetRef="M_Ask__no" />
+      <bpmn:sequenceFlow id="Flow_119_M_Ask__no_To_M_Ask__eno" sourceRef="M_Ask__no" targetRef="M_Ask__eno" />
+      <bpmn:sequenceFlow id="Flow_120_M_Ask__eg_To_M_Ask__ct" sourceRef="M_Ask__eg" targetRef="M_Ask__ct" />
+      <bpmn:sequenceFlow id="Flow_121_M_Ask__ct_To_M_Ask__g" sourceRef="M_Ask__ct" targetRef="M_Ask__g" />
+      <bpmn:sequenceFlow id="Flow_122_M_Ask__g_To_M_Ask__w" name="Yes" sourceRef="M_Ask__g" targetRef="M_Ask__w">
+        <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=M_AskResult = true</bpmn:conditionExpression>
+      </bpmn:sequenceFlow>
+      <bpmn:sequenceFlow id="Flow_123_M_Ask__g_To_M_Ask__ee" name="No" sourceRef="M_Ask__g" targetRef="M_Ask__ee">
+        <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=M_AskResult = false</bpmn:conditionExpression>
+      </bpmn:sequenceFlow>
+      <bpmn:sequenceFlow id="Flow_124_M_Ask__w_To_M_Ask__j" sourceRef="M_Ask__w" targetRef="M_Ask__j" />
+    </bpmn:subProcess>
+    <bpmn:boundaryEvent id="M_AskErr" name="No answer" attachedToRef="M_Ask">
+      <bpmn:outgoing>Flow_52_M_AskErr_To_M_Chk</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="M_AskErr_def" errorRef="Error_GatewayNotAnswering" />
+    </bpmn:boundaryEvent>
+    <bpmn:exclusiveGateway id="M_JA" name="">
+      <bpmn:incoming>Flow_44_M_Ask_To_M_JA</bpmn:incoming>
+      <bpmn:incoming>Flow_54_M_Ans_To_M_JA</bpmn:incoming>
+      <bpmn:outgoing>Flow_45_M_JA_To_M_Appr</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:exclusiveGateway id="M_Appr" name="Approved?">
+      <bpmn:incoming>Flow_45_M_JA_To_M_Appr</bpmn:incoming>
+      <bpmn:outgoing>Flow_46_M_Appr_To_M_Conf2</bpmn:outgoing>
+      <bpmn:outgoing>Flow_49_M_Appr_To_M_Decl</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sendTask id="M_Conf2" name="Confirm order to customer">
+      <bpmn:documentation>UC2: if payment is successful the order is confirmed.</bpmn:documentation>
+      <bpmn:incoming>Flow_46_M_Appr_To_M_Conf2</bpmn:incoming>
+      <bpmn:outgoing>Flow_47_M_Conf2_To_M_Upd</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:subProcess id="M_Upd" name="Update stock, producer amounts and 5% commission">
+      <bpmn:documentation>UC2: update stock, calculate the amount for each producer and the marketplace 5% commission (case study). Amounts are kept for the weekly producer settlement.</bpmn:documentation>
+      <bpmn:incoming>Flow_47_M_Conf2_To_M_Upd</bpmn:incoming>
+      <bpmn:outgoing>Flow_48_M_Upd_To_M_Notify</bpmn:outgoing>
+      <bpmn:startEvent id="M_Upd__s" name="Payment approved">
+        <bpmn:outgoing>Flow_125_M_Upd__s_To_M_Upd__st</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:serviceTask id="M_Upd__st" name="Update the stock quantities">
+        <bpmn:incoming>Flow_125_M_Upd__s_To_M_Upd__st</bpmn:incoming>
+        <bpmn:outgoing>Flow_126_M_Upd__st_To_M_Upd__sh</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:businessRuleTask id="M_Upd__sh" name="Work out each producer&#39;s amount">
+        <bpmn:incoming>Flow_126_M_Upd__st_To_M_Upd__sh</bpmn:incoming>
+        <bpmn:outgoing>Flow_127_M_Upd__sh_To_M_Upd__co</bpmn:outgoing>
+        <bpmn:multiInstanceLoopCharacteristics />
+      </bpmn:businessRuleTask>
+      <bpmn:businessRuleTask id="M_Upd__co" name="Calculate the 5% commission">
+        <bpmn:incoming>Flow_127_M_Upd__sh_To_M_Upd__co</bpmn:incoming>
+        <bpmn:outgoing>Flow_128_M_Upd__co_To_M_Upd__r</bpmn:outgoing>
+      </bpmn:businessRuleTask>
+      <bpmn:serviceTask id="M_Upd__r" name="Record amounts and commission">
+        <bpmn:incoming>Flow_128_M_Upd__co_To_M_Upd__r</bpmn:incoming>
+        <bpmn:outgoing>Flow_129_M_Upd__r_To_M_Upd__e</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:endEvent id="M_Upd__e" name="Stock and amounts recorded">
+        <bpmn:incoming>Flow_129_M_Upd__r_To_M_Upd__e</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="Flow_125_M_Upd__s_To_M_Upd__st" sourceRef="M_Upd__s" targetRef="M_Upd__st" />
+      <bpmn:sequenceFlow id="Flow_126_M_Upd__st_To_M_Upd__sh" sourceRef="M_Upd__st" targetRef="M_Upd__sh" />
+      <bpmn:sequenceFlow id="Flow_127_M_Upd__sh_To_M_Upd__co" sourceRef="M_Upd__sh" targetRef="M_Upd__co" />
+      <bpmn:sequenceFlow id="Flow_128_M_Upd__co_To_M_Upd__r" sourceRef="M_Upd__co" targetRef="M_Upd__r" />
+      <bpmn:sequenceFlow id="Flow_129_M_Upd__r_To_M_Upd__e" sourceRef="M_Upd__r" targetRef="M_Upd__e" />
+    </bpmn:subProcess>
+    <bpmn:sendTask id="M_Decl" name="Tell customer payment declined">
+      <bpmn:documentation>UC2: if payment is declined the customer is informed and given the chance to retry.</bpmn:documentation>
+      <bpmn:incoming>Flow_49_M_Appr_To_M_Decl</bpmn:incoming>
+      <bpmn:outgoing>Flow_68_M_Decl_To_M_JR</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:serviceTask id="M_Chk" name="Check payment status">
+      <bpmn:documentation>Week 8: after no reply, ask the gateway what happened. Never assume the payment failed.</bpmn:documentation>
+      <bpmn:incoming>Flow_52_M_AskErr_To_M_Chk</bpmn:incoming>
+      <bpmn:outgoing>Flow_53_M_Chk_To_M_Ans</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="M_Ans" name="Answer received?">
+      <bpmn:incoming>Flow_53_M_Chk_To_M_Ans</bpmn:incoming>
+      <bpmn:outgoing>Flow_54_M_Ans_To_M_JA</bpmn:outgoing>
+      <bpmn:outgoing>Flow_55_M_Ans_To_M_Pend</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sendTask id="M_Pend" name="Tell customer payment is pending">
+      <bpmn:incoming>Flow_55_M_Ans_To_M_Pend</bpmn:incoming>
+      <bpmn:outgoing>Flow_56_M_Pend_To_M_PendEnd</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="M_PendEnd" name="Order held until payment is confirmed">
+      <bpmn:incoming>Flow_56_M_Pend_To_M_PendEnd</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:subProcess id="M_Notify" name="Notify each producer">
+      <bpmn:documentation>UC2: the relevant producers are notified. Case study: at least 48 hours' notice.</bpmn:documentation>
+      <bpmn:incoming>Flow_48_M_Upd_To_M_Notify</bpmn:incoming>
+      <bpmn:outgoing>Flow_57_M_Notify_To_M_RR</bpmn:outgoing>
+      <bpmn:multiInstanceLoopCharacteristics />
+      <bpmn:startEvent id="M_Notify__s" name="Order confirmed">
+        <bpmn:outgoing>Flow_130_M_Notify__s_To_M_Notify__g</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:exclusiveGateway id="M_Notify__g" name="Producer uses the platform?">
+        <bpmn:incoming>Flow_130_M_Notify__s_To_M_Notify__g</bpmn:incoming>
+        <bpmn:outgoing>Flow_131_M_Notify__g_To_M_Notify__a</bpmn:outgoing>
+        <bpmn:outgoing>Flow_132_M_Notify__g_To_M_Notify__b</bpmn:outgoing>
+      </bpmn:exclusiveGateway>
+      <bpmn:serviceTask id="M_Notify__a" name="Show the order in the producer&#39;s list">
+        <bpmn:incoming>Flow_131_M_Notify__g_To_M_Notify__a</bpmn:incoming>
+        <bpmn:outgoing>Flow_133_M_Notify__a_To_M_Notify__j</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:userTask id="M_Notify__b" name="Email or phone the order to the producer">
+        <bpmn:incoming>Flow_132_M_Notify__g_To_M_Notify__b</bpmn:incoming>
+        <bpmn:outgoing>Flow_134_M_Notify__b_To_M_Notify__j</bpmn:outgoing>
+      </bpmn:userTask>
+      <bpmn:exclusiveGateway id="M_Notify__j" name="">
+        <bpmn:incoming>Flow_133_M_Notify__a_To_M_Notify__j</bpmn:incoming>
+        <bpmn:incoming>Flow_134_M_Notify__b_To_M_Notify__j</bpmn:incoming>
+        <bpmn:outgoing>Flow_135_M_Notify__j_To_M_Notify__c</bpmn:outgoing>
+      </bpmn:exclusiveGateway>
+      <bpmn:intermediateCatchEvent id="M_Notify__c" name="Producer confirms">
+        <bpmn:incoming>Flow_135_M_Notify__j_To_M_Notify__c</bpmn:incoming>
+        <bpmn:outgoing>Flow_136_M_Notify__c_To_M_Notify__e1</bpmn:outgoing>
+        <bpmn:messageEventDefinition id="M_Notify__c_def" messageRef="Message_ProducerConfirms" />
+      </bpmn:intermediateCatchEvent>
+      <bpmn:endEvent id="M_Notify__e1" name="Producer notified">
+        <bpmn:incoming>Flow_136_M_Notify__c_To_M_Notify__e1</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="Flow_130_M_Notify__s_To_M_Notify__g" sourceRef="M_Notify__s" targetRef="M_Notify__g" />
+      <bpmn:sequenceFlow id="Flow_131_M_Notify__g_To_M_Notify__a" name="Yes" sourceRef="M_Notify__g" targetRef="M_Notify__a">
+        <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=M_NotifyResult = true</bpmn:conditionExpression>
+      </bpmn:sequenceFlow>
+      <bpmn:sequenceFlow id="Flow_132_M_Notify__g_To_M_Notify__b" name="No" sourceRef="M_Notify__g" targetRef="M_Notify__b">
+        <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=M_NotifyResult = false</bpmn:conditionExpression>
+      </bpmn:sequenceFlow>
+      <bpmn:sequenceFlow id="Flow_133_M_Notify__a_To_M_Notify__j" sourceRef="M_Notify__a" targetRef="M_Notify__j" />
+      <bpmn:sequenceFlow id="Flow_134_M_Notify__b_To_M_Notify__j" sourceRef="M_Notify__b" targetRef="M_Notify__j" />
+      <bpmn:sequenceFlow id="Flow_135_M_Notify__j_To_M_Notify__c" sourceRef="M_Notify__j" targetRef="M_Notify__c" />
+      <bpmn:sequenceFlow id="Flow_136_M_Notify__c_To_M_Notify__e1" sourceRef="M_Notify__c" targetRef="M_Notify__e1" />
+    </bpmn:subProcess>
+    <bpmn:receiveTask id="M_RR" name="Receive producer-ready updates" messageRef="Message_ReadyForHandover">
+      <bpmn:documentation>Waits for EVERY producer to say the order is ready (multi-instance).</bpmn:documentation>
+      <bpmn:incoming>Flow_57_M_Notify_To_M_RR</bpmn:incoming>
+      <bpmn:outgoing>Flow_58_M_RR_To_M_HG</bpmn:outgoing>
+      <bpmn:multiInstanceLoopCharacteristics />
+    </bpmn:receiveTask>
+    <bpmn:exclusiveGateway id="M_HG" name="Handover method?">
+      <bpmn:incoming>Flow_58_M_RR_To_M_HG</bpmn:incoming>
+      <bpmn:outgoing>Flow_59_M_HG_To_M_Del</bpmn:outgoing>
+      <bpmn:outgoing>Flow_60_M_HG_To_M_Col</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="M_Del" name="Arrange delivery">
+      <bpmn:incoming>Flow_59_M_HG_To_M_Del</bpmn:incoming>
+      <bpmn:outgoing>Flow_61_M_Del_To_M_Mrg</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="M_Col" name="Arrange collection">
+      <bpmn:incoming>Flow_60_M_HG_To_M_Col</bpmn:incoming>
+      <bpmn:outgoing>Flow_62_M_Col_To_M_Mrg</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="M_Mrg" name="">
+      <bpmn:incoming>Flow_61_M_Del_To_M_Mrg</bpmn:incoming>
+      <bpmn:incoming>Flow_62_M_Col_To_M_Mrg</bpmn:incoming>
+      <bpmn:outgoing>Flow_63_M_Mrg_To_M_SendHO</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sendTask id="M_SendHO" name="Send handover details">
+      <bpmn:documentation>How delivery works: the customer is told the delivery or collection time and the producer does the hand-over.</bpmn:documentation>
+      <bpmn:incoming>Flow_63_M_Mrg_To_M_SendHO</bpmn:incoming>
+      <bpmn:outgoing>Flow_64_M_SendHO_To_M_RHO</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:receiveTask id="M_RHO" name="Receive hand-over confirmation" messageRef="Message_HandOverDone">
+      <bpmn:incoming>Flow_64_M_SendHO_To_M_RHO</bpmn:incoming>
+      <bpmn:outgoing>Flow_65_M_RHO_To_M_Rec</bpmn:outgoing>
+    </bpmn:receiveTask>
+    <bpmn:serviceTask id="M_Rec" name="Record order as handed over">
+      <bpmn:incoming>Flow_65_M_RHO_To_M_Rec</bpmn:incoming>
+      <bpmn:outgoing>Flow_66_M_Rec_To_M_End</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="M_End" name="Order complete">
+      <bpmn:incoming>Flow_66_M_Rec_To_M_End</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_31_M_Start_To_M_J1" sourceRef="M_Start" targetRef="M_J1" />
+    <bpmn:sequenceFlow id="Flow_32_M_J1_To_M_Check" sourceRef="M_J1" targetRef="M_Check" />
+    <bpmn:sequenceFlow id="Flow_33_M_Check_To_M_Stk" sourceRef="M_Check" targetRef="M_Stk" />
+    <bpmn:sequenceFlow id="Flow_34_M_Stk_To_M_Ident" name="Yes" sourceRef="M_Stk" targetRef="M_Ident">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=itemsInStock = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_35_M_Stk_To_M_Short" name="No" sourceRef="M_Stk" targetRef="M_Short">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=itemsInStock = false</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_36_M_Short_To_M_Rev" sourceRef="M_Short" targetRef="M_Rev" />
+    <bpmn:sequenceFlow id="Flow_37_M_Ident_To_M_Dec" sourceRef="M_Ident" targetRef="M_Dec" />
+    <bpmn:sequenceFlow id="Flow_38_M_Dec_To_M_Conf" sourceRef="M_Dec" targetRef="M_Conf" />
+    <bpmn:sequenceFlow id="Flow_39_M_Conf_To_M_Cancelled" name="No" sourceRef="M_Conf" targetRef="M_Cancelled">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=purchaseConfirmed = false</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_40_M_Conf_To_M_Order" name="Yes" sourceRef="M_Conf" targetRef="M_Order">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=purchaseConfirmed = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_41_M_Order_To_M_JR" sourceRef="M_Order" targetRef="M_JR" />
+    <bpmn:sequenceFlow id="Flow_42_M_JR_To_M_Rcv" sourceRef="M_JR" targetRef="M_Rcv" />
+    <bpmn:sequenceFlow id="Flow_43_M_Rcv_To_M_Ask" sourceRef="M_Rcv" targetRef="M_Ask" />
+    <bpmn:sequenceFlow id="Flow_44_M_Ask_To_M_JA" sourceRef="M_Ask" targetRef="M_JA" />
+    <bpmn:sequenceFlow id="Flow_45_M_JA_To_M_Appr" sourceRef="M_JA" targetRef="M_Appr" />
+    <bpmn:sequenceFlow id="Flow_46_M_Appr_To_M_Conf2" name="Yes" sourceRef="M_Appr" targetRef="M_Conf2">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=gatewayApproved = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_47_M_Conf2_To_M_Upd" sourceRef="M_Conf2" targetRef="M_Upd" />
+    <bpmn:sequenceFlow id="Flow_48_M_Upd_To_M_Notify" sourceRef="M_Upd" targetRef="M_Notify" />
+    <bpmn:sequenceFlow id="Flow_49_M_Appr_To_M_Decl" name="No" sourceRef="M_Appr" targetRef="M_Decl">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=gatewayApproved = false</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_50_M_RcvT_To_M_Close" sourceRef="M_RcvT" targetRef="M_Close" />
+    <bpmn:sequenceFlow id="Flow_51_M_Close_To_M_ClosedEnd" sourceRef="M_Close" targetRef="M_ClosedEnd" />
+    <bpmn:sequenceFlow id="Flow_52_M_AskErr_To_M_Chk" sourceRef="M_AskErr" targetRef="M_Chk" />
+    <bpmn:sequenceFlow id="Flow_53_M_Chk_To_M_Ans" sourceRef="M_Chk" targetRef="M_Ans" />
+    <bpmn:sequenceFlow id="Flow_54_M_Ans_To_M_JA" name="Yes" sourceRef="M_Ans" targetRef="M_JA">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=answerReceived = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_55_M_Ans_To_M_Pend" name="No" sourceRef="M_Ans" targetRef="M_Pend">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=answerReceived = false</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_56_M_Pend_To_M_PendEnd" sourceRef="M_Pend" targetRef="M_PendEnd" />
+    <bpmn:sequenceFlow id="Flow_57_M_Notify_To_M_RR" sourceRef="M_Notify" targetRef="M_RR" />
+    <bpmn:sequenceFlow id="Flow_58_M_RR_To_M_HG" sourceRef="M_RR" targetRef="M_HG" />
+    <bpmn:sequenceFlow id="Flow_59_M_HG_To_M_Del" name="Delivery" sourceRef="M_HG" targetRef="M_Del">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=handoverMethod = "delivery"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_60_M_HG_To_M_Col" name="Collection" sourceRef="M_HG" targetRef="M_Col">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=handoverMethod = "collection"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_61_M_Del_To_M_Mrg" sourceRef="M_Del" targetRef="M_Mrg" />
+    <bpmn:sequenceFlow id="Flow_62_M_Col_To_M_Mrg" sourceRef="M_Col" targetRef="M_Mrg" />
+    <bpmn:sequenceFlow id="Flow_63_M_Mrg_To_M_SendHO" sourceRef="M_Mrg" targetRef="M_SendHO" />
+    <bpmn:sequenceFlow id="Flow_64_M_SendHO_To_M_RHO" sourceRef="M_SendHO" targetRef="M_RHO" />
+    <bpmn:sequenceFlow id="Flow_65_M_RHO_To_M_Rec" sourceRef="M_RHO" targetRef="M_Rec" />
+    <bpmn:sequenceFlow id="Flow_66_M_Rec_To_M_End" sourceRef="M_Rec" targetRef="M_End" />
+    <bpmn:sequenceFlow id="Flow_67_M_Rev_To_M_J1" sourceRef="M_Rev" targetRef="M_J1" />
+    <bpmn:sequenceFlow id="Flow_68_M_Decl_To_M_JR" sourceRef="M_Decl" targetRef="M_JR" />
+    <bpmn:dataStoreReference id="DS_Stock" name="Stock levels" />
+    <bpmn:dataStoreReference id="DS_Orders" name="Order records" />
+  </bpmn:process>
+  <bpmn:process id="Process_Gateway" name="Payment gateway (sandbox)" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_Process_Gateway">
+      <bpmn:lane id="Lane_GA" name="Take the payment">
+        <bpmn:flowNodeRef>G_Start</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>G_Check</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>G_Gw</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>G_Ok</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>G_No</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_GB" name="Report payment status">
+        <bpmn:flowNodeRef>G_SStart</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>G_Look</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>G_SEnd</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="G_Start" name="Payment request">
+      <bpmn:outgoing>Flow_79_G_Start_To_G_Check</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="G_Start_def" messageRef="Message_PaymentRequest" />
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="G_Check" name="Check the payment">
+      <bpmn:incoming>Flow_79_G_Start_To_G_Check</bpmn:incoming>
+      <bpmn:outgoing>Flow_80_G_Check_To_G_Gw</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="G_Gw" name="Approved?">
+      <bpmn:incoming>Flow_80_G_Check_To_G_Gw</bpmn:incoming>
+      <bpmn:outgoing>Flow_81_G_Gw_To_G_Ok</bpmn:outgoing>
+      <bpmn:outgoing>Flow_82_G_Gw_To_G_No</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="G_Ok" name="Approved">
+      <bpmn:incoming>Flow_81_G_Gw_To_G_Ok</bpmn:incoming>
+      <bpmn:messageEventDefinition id="G_Ok_def" messageRef="Message_GatewayApproved" />
+    </bpmn:endEvent>
+    <bpmn:endEvent id="G_No" name="Declined">
+      <bpmn:incoming>Flow_82_G_Gw_To_G_No</bpmn:incoming>
+      <bpmn:messageEventDefinition id="G_No_def" messageRef="Message_GatewayDeclined" />
+    </bpmn:endEvent>
+    <bpmn:startEvent id="G_SStart" name="Status enquiry">
+      <bpmn:outgoing>Flow_83_G_SStart_To_G_Look</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="G_SStart_def" messageRef="Message_StatusEnquiry" />
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="G_Look" name="Look up the payment">
+      <bpmn:incoming>Flow_83_G_SStart_To_G_Look</bpmn:incoming>
+      <bpmn:outgoing>Flow_84_G_Look_To_G_SEnd</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="G_SEnd" name="Payment status">
+      <bpmn:incoming>Flow_84_G_Look_To_G_SEnd</bpmn:incoming>
+      <bpmn:messageEventDefinition id="G_SEnd_def" messageRef="Message_StatusResponse" />
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_79_G_Start_To_G_Check" sourceRef="G_Start" targetRef="G_Check" />
+    <bpmn:sequenceFlow id="Flow_80_G_Check_To_G_Gw" sourceRef="G_Check" targetRef="G_Gw" />
+    <bpmn:sequenceFlow id="Flow_81_G_Gw_To_G_Ok" name="Yes" sourceRef="G_Gw" targetRef="G_Ok">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=gatewayApproved = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_82_G_Gw_To_G_No" name="No" sourceRef="G_Gw" targetRef="G_No">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=gatewayApproved = false</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_83_G_SStart_To_G_Look" sourceRef="G_SStart" targetRef="G_Look" />
+    <bpmn:sequenceFlow id="Flow_84_G_Look_To_G_SEnd" sourceRef="G_Look" targetRef="G_SEnd" />
+  </bpmn:process>
+  <bpmn:process id="Process_Producers" name="Local producers (each of the 40 SMEs)" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_Process_Producers">
+      <bpmn:lane id="Lane_P1" name="Orders and preparation">
+        <bpmn:flowNodeRef>P_Start</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P_Read</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P_Ack</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P_Prep</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P_Ready</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_P2" name="Delivery and collection">
+        <bpmn:flowNodeRef>P_HG</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P_Deliver</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P_Coll</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P_Mrg</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P_End</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="P_Start" name="Order notice">
+      <bpmn:outgoing>Flow_69_P_Start_To_P_Read</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="P_Start_def" messageRef="Message_OrderNotice" />
+    </bpmn:startEvent>
+    <bpmn:userTask id="P_Read" name="Read the order">
+      <bpmn:documentation>Case study: producers need clear visibility of incoming orders. Some only use email and telephone.</bpmn:documentation>
+      <bpmn:incoming>Flow_69_P_Start_To_P_Read</bpmn:incoming>
+      <bpmn:outgoing>Flow_70_P_Read_To_P_Ack</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:sendTask id="P_Ack" name="Confirm order received">
+      <bpmn:incoming>Flow_70_P_Read_To_P_Ack</bpmn:incoming>
+      <bpmn:outgoing>Flow_71_P_Ack_To_P_Prep</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:userTask id="P_Prep" name="Prepare the products">
+      <bpmn:documentation>Case study: minimum 48 hours' notice to prepare.</bpmn:documentation>
+      <bpmn:incoming>Flow_71_P_Ack_To_P_Prep</bpmn:incoming>
+      <bpmn:outgoing>Flow_72_P_Prep_To_P_Ready</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:intermediateThrowEvent id="P_Ready" name="Ready for handover">
+      <bpmn:incoming>Flow_72_P_Prep_To_P_Ready</bpmn:incoming>
+      <bpmn:outgoing>Flow_73_P_Ready_To_P_HG</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="P_Ready_def" messageRef="Message_ReadyForHandover" />
+    </bpmn:intermediateThrowEvent>
+    <bpmn:exclusiveGateway id="P_HG" name="Handover method?">
+      <bpmn:incoming>Flow_73_P_Ready_To_P_HG</bpmn:incoming>
+      <bpmn:outgoing>Flow_74_P_HG_To_P_Deliver</bpmn:outgoing>
+      <bpmn:outgoing>Flow_75_P_HG_To_P_Coll</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="P_Deliver" name="Deliver to customer">
+      <bpmn:incoming>Flow_74_P_HG_To_P_Deliver</bpmn:incoming>
+      <bpmn:outgoing>Flow_76_P_Deliver_To_P_Mrg</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="P_Coll" name="Hand over at the farm">
+      <bpmn:incoming>Flow_75_P_HG_To_P_Coll</bpmn:incoming>
+      <bpmn:outgoing>Flow_77_P_Coll_To_P_Mrg</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="P_Mrg" name="">
+      <bpmn:incoming>Flow_76_P_Deliver_To_P_Mrg</bpmn:incoming>
+      <bpmn:incoming>Flow_77_P_Coll_To_P_Mrg</bpmn:incoming>
+      <bpmn:outgoing>Flow_78_P_Mrg_To_P_End</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="P_End" name="Hand-over done">
+      <bpmn:incoming>Flow_78_P_Mrg_To_P_End</bpmn:incoming>
+      <bpmn:messageEventDefinition id="P_End_def" messageRef="Message_HandOverDone" />
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_69_P_Start_To_P_Read" sourceRef="P_Start" targetRef="P_Read" />
+    <bpmn:sequenceFlow id="Flow_70_P_Read_To_P_Ack" sourceRef="P_Read" targetRef="P_Ack" />
+    <bpmn:sequenceFlow id="Flow_71_P_Ack_To_P_Prep" sourceRef="P_Ack" targetRef="P_Prep" />
+    <bpmn:sequenceFlow id="Flow_72_P_Prep_To_P_Ready" sourceRef="P_Prep" targetRef="P_Ready" />
+    <bpmn:sequenceFlow id="Flow_73_P_Ready_To_P_HG" sourceRef="P_Ready" targetRef="P_HG" />
+    <bpmn:sequenceFlow id="Flow_74_P_HG_To_P_Deliver" name="Delivery" sourceRef="P_HG" targetRef="P_Deliver">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=handoverMethod = "delivery"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_75_P_HG_To_P_Coll" name="Collection" sourceRef="P_HG" targetRef="P_Coll">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=handoverMethod = "collection"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_76_P_Deliver_To_P_Mrg" sourceRef="P_Deliver" targetRef="P_Mrg" />
+    <bpmn:sequenceFlow id="Flow_77_P_Coll_To_P_Mrg" sourceRef="P_Coll" targetRef="P_Mrg" />
+    <bpmn:sequenceFlow id="Flow_78_P_Mrg_To_P_End" sourceRef="P_Mrg" targetRef="P_End" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_Main">
+    <bpmndi:BPMNPlane id="BPMNPlane_Main" bpmnElement="Collaboration_UC2">
+      <bpmndi:BPMNShape id="Participant_Customer_di" bpmnElement="Participant_Customer" isHorizontal="true">
+        <dc:Bounds x="140" y="40" width="3800" height="400" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C_Start_di" bpmnElement="C_Start">
+        <dc:Bounds x="172" y="97" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="160" y="135" width="60" height="28" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C_Browse_di" bpmnElement="C_Browse">
+        <dc:Bounds x="235" y="79" width="130" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C_Basket_di" bpmnElement="C_Basket">
+        <dc:Bounds x="385" y="79" width="120" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C_Send_di" bpmnElement="C_Send">
+        <dc:Bounds x="530" y="79" width="120" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C_JS_di" bpmnElement="C_JS" isMarkerVisible="true">
+        <dc:Bounds x="665" y="90" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C_EG_di" bpmnElement="C_EG">
+        <dc:Bounds x="745" y="90" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="720" y="74" width="100" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C_Sum_di" bpmnElement="C_Sum">
+        <dc:Bounds x="1052" y="97" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1025" y="81" width="90" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C_Unav_di" bpmnElement="C_Unav">
+        <dc:Bounds x="867" y="177" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="840" y="147" width="90" height="28" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C_Amend_di" bpmnElement="C_Amend">
+        <dc:Bounds x="940" y="159" width="100" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C_Resub_di" bpmnElement="C_Resub">
+        <dc:Bounds x="1120" y="159" width="120" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C_Review_di" bpmnElement="C_Review">
+        <dc:Bounds x="1150" y="79" width="120" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C_Conf_di" bpmnElement="C_Conf" isMarkerVisible="true">
+        <dc:Bounds x="1305" y="90" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1300" y="74" width="60" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C_Confirm_di" bpmnElement="C_Confirm">
+        <dc:Bounds x="1385" y="79" width="130" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C_Abandon_di" bpmnElement="C_Abandon">
+        <dc:Bounds x="1462" y="177" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1501" y="181" width="90" height="28" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C_JP_di" bpmnElement="C_JP" isMarkerVisible="true">
+        <dc:Bounds x="1635" y="90" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C_Pay_di" bpmnElement="C_Pay">
+        <dc:Bounds x="1750" y="79" width="140" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C_EG2_di" bpmnElement="C_EG2">
+        <dc:Bounds x="1935" y="90" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1910" y="74" width="100" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C_OrdConf_di" bpmnElement="C_OrdConf">
+        <dc:Bounds x="2372" y="97" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2345" y="81" width="90" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C_PendC_di" bpmnElement="C_PendC">
+        <dc:Bounds x="2282" y="177" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2245" y="147" width="110" height="28" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C_PendEnd_di" bpmnElement="C_PendEnd">
+        <dc:Bounds x="2422" y="177" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2461" y="181" width="100" height="28" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C_DeclC_di" bpmnElement="C_DeclC">
+        <dc:Bounds x="2244" y="257" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2178" y="295" width="70" height="28" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C_Try_di" bpmnElement="C_Try" isMarkerVisible="true">
+        <dc:Bounds x="2425" y="250" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2395" y="220" width="110" height="28" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C_New_di" bpmnElement="C_New">
+        <dc:Bounds x="2520" y="239" width="140" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C_Abn_di" bpmnElement="C_Abn">
+        <dc:Bounds x="2432" y="332" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2471" y="343" width="100" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C_DelivC_di" bpmnElement="C_DelivC">
+        <dc:Bounds x="3382" y="97" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3345" y="67" width="110" height="28" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C_Receive_di" bpmnElement="C_Receive">
+        <dc:Bounds x="3500" y="79" width="140" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C_End_di" bpmnElement="C_End">
+        <dc:Bounds x="3672" y="97" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3640" y="135" width="100" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_1_C_Start_To_C_Browse_di" bpmnElement="Flow_1_C_Start_To_C_Browse">
+        <di:waypoint x="208" y="115" />
+        <di:waypoint x="235" y="115" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_2_C_Browse_To_C_Basket_di" bpmnElement="Flow_2_C_Browse_To_C_Basket">
+        <di:waypoint x="365" y="115" />
+        <di:waypoint x="385" y="115" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_3_C_Basket_To_C_Send_di" bpmnElement="Flow_3_C_Basket_To_C_Send">
+        <di:waypoint x="505" y="115" />
+        <di:waypoint x="530" y="115" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_4_C_Send_To_C_JS_di" bpmnElement="Flow_4_C_Send_To_C_JS">
+        <di:waypoint x="650" y="115" />
+        <di:waypoint x="665" y="115" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_5_C_JS_To_C_EG_di" bpmnElement="Flow_5_C_JS_To_C_EG">
+        <di:waypoint x="715" y="115" />
+        <di:waypoint x="745" y="115" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_6_C_EG_To_C_Sum_di" bpmnElement="Flow_6_C_EG_To_C_Sum">
+        <di:waypoint x="795" y="115" />
+        <di:waypoint x="1052" y="115" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_7_C_EG_To_C_Unav_di" bpmnElement="Flow_7_C_EG_To_C_Unav">
+        <di:waypoint x="770" y="140" />
+        <di:waypoint x="770" y="195" />
+        <di:waypoint x="867" y="195" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_8_C_Unav_To_C_Amend_di" bpmnElement="Flow_8_C_Unav_To_C_Amend">
+        <di:waypoint x="903" y="195" />
+        <di:waypoint x="940" y="195" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_9_C_Amend_To_C_Resub_di" bpmnElement="Flow_9_C_Amend_To_C_Resub">
+        <di:waypoint x="1040" y="195" />
+        <di:waypoint x="1120" y="195" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_10_C_Sum_To_C_Review_di" bpmnElement="Flow_10_C_Sum_To_C_Review">
+        <di:waypoint x="1088" y="115" />
+        <di:waypoint x="1150" y="115" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_11_C_Review_To_C_Conf_di" bpmnElement="Flow_11_C_Review_To_C_Conf">
+        <di:waypoint x="1270" y="115" />
+        <di:waypoint x="1305" y="115" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_12_C_Conf_To_C_Confirm_di" bpmnElement="Flow_12_C_Conf_To_C_Confirm">
+        <di:waypoint x="1355" y="115" />
+        <di:waypoint x="1385" y="115" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1359" y="97" width="24" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_13_C_Conf_To_C_Abandon_di" bpmnElement="Flow_13_C_Conf_To_C_Abandon">
+        <di:waypoint x="1330" y="140" />
+        <di:waypoint x="1330" y="195" />
+        <di:waypoint x="1462" y="195" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1334" y="142" width="24" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_14_C_Confirm_To_C_JP_di" bpmnElement="Flow_14_C_Confirm_To_C_JP">
+        <di:waypoint x="1515" y="115" />
+        <di:waypoint x="1635" y="115" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_15_C_JP_To_C_Pay_di" bpmnElement="Flow_15_C_JP_To_C_Pay">
+        <di:waypoint x="1685" y="115" />
+        <di:waypoint x="1750" y="115" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_16_C_Pay_To_C_EG2_di" bpmnElement="Flow_16_C_Pay_To_C_EG2">
+        <di:waypoint x="1890" y="115" />
+        <di:waypoint x="1935" y="115" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_17_C_EG2_To_C_OrdConf_di" bpmnElement="Flow_17_C_EG2_To_C_OrdConf">
+        <di:waypoint x="1985" y="115" />
+        <di:waypoint x="2372" y="115" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_18_C_EG2_To_C_PendC_di" bpmnElement="Flow_18_C_EG2_To_C_PendC">
+        <di:waypoint x="1960" y="140" />
+        <di:waypoint x="1960" y="195" />
+        <di:waypoint x="2282" y="195" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_19_C_EG2_To_C_DeclC_di" bpmnElement="Flow_19_C_EG2_To_C_DeclC">
+        <di:waypoint x="1960" y="140" />
+        <di:waypoint x="1960" y="275" />
+        <di:waypoint x="2244" y="275" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_20_C_PendC_To_C_PendEnd_di" bpmnElement="Flow_20_C_PendC_To_C_PendEnd">
+        <di:waypoint x="2318" y="195" />
+        <di:waypoint x="2422" y="195" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_21_C_DeclC_To_C_Try_di" bpmnElement="Flow_21_C_DeclC_To_C_Try">
+        <di:waypoint x="2280" y="275" />
+        <di:waypoint x="2425" y="275" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_22_C_Try_To_C_New_di" bpmnElement="Flow_22_C_Try_To_C_New">
+        <di:waypoint x="2475" y="275" />
+        <di:waypoint x="2520" y="275" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2479" y="257" width="24" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_23_C_Try_To_C_Abn_di" bpmnElement="Flow_23_C_Try_To_C_Abn">
+        <di:waypoint x="2450" y="300" />
+        <di:waypoint x="2450" y="332" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2454" y="302" width="24" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_24_C_OrdConf_To_C_DelivC_di" bpmnElement="Flow_24_C_OrdConf_To_C_DelivC">
+        <di:waypoint x="2408" y="115" />
+        <di:waypoint x="3382" y="115" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_25_C_DelivC_To_C_Receive_di" bpmnElement="Flow_25_C_DelivC_To_C_Receive">
+        <di:waypoint x="3418" y="115" />
+        <di:waypoint x="3500" y="115" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_26_C_Receive_To_C_End_di" bpmnElement="Flow_26_C_Receive_To_C_End">
+        <di:waypoint x="3640" y="115" />
+        <di:waypoint x="3672" y="115" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_27_C_Resub_To_C_JS_di" bpmnElement="Flow_27_C_Resub_To_C_JS">
+        <di:waypoint x="1150" y="231" />
+        <di:waypoint x="1150" y="275" />
+        <di:waypoint x="690" y="275" />
+        <di:waypoint x="690" y="140" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_28_C_New_To_C_JP_di" bpmnElement="Flow_28_C_New_To_C_JP">
+        <di:waypoint x="2560" y="311" />
+        <di:waypoint x="2560" y="410" />
+        <di:waypoint x="1660" y="410" />
+        <di:waypoint x="1660" y="140" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Participant_Marketplace_di" bpmnElement="Participant_Marketplace" isHorizontal="true">
+        <dc:Bounds x="140" y="520" width="3800" height="1050" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Delivery_di" bpmnElement="Lane_Delivery" isHorizontal="true">
+        <dc:Bounds x="170" y="1230" width="3770" height="340" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Orders_di" bpmnElement="Lane_Orders" isHorizontal="true">
+        <dc:Bounds x="170" y="800" width="3770" height="430" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Checkout_di" bpmnElement="Lane_Checkout" isHorizontal="true">
+        <dc:Bounds x="170" y="520" width="3770" height="280" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Start_di" bpmnElement="M_Start">
+        <dc:Bounds x="572" y="582" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="545" y="566" width="90" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_J1_di" bpmnElement="M_J1" isMarkerVisible="true">
+        <dc:Bounds x="645" y="575" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Check_di" bpmnElement="M_Check">
+        <dc:Bounds x="715" y="564" width="150" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Stk_di" bpmnElement="M_Stk" isMarkerVisible="true">
+        <dc:Bounds x="905" y="575" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="880" y="559" width="100" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Short_di" bpmnElement="M_Short">
+        <dc:Bounds x="855" y="679" width="150" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Rev_di" bpmnElement="M_Rev">
+        <dc:Bounds x="1110" y="679" width="140" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Ident_di" bpmnElement="M_Ident" isExpanded="false">
+        <dc:Bounds x="985" y="564" width="170" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Dec_di" bpmnElement="M_Dec">
+        <dc:Bounds x="1380" y="564" width="140" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Conf_di" bpmnElement="M_Conf" isMarkerVisible="true">
+        <dc:Bounds x="1565" y="575" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1540" y="559" width="100" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Cancelled_di" bpmnElement="M_Cancelled">
+        <dc:Bounds x="1682" y="582" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1655" y="620" width="90" height="28" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Order_di" bpmnElement="M_Order" isExpanded="false">
+        <dc:Bounds x="1515" y="854" width="150" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_JR_di" bpmnElement="M_JR" isMarkerVisible="true">
+        <dc:Bounds x="1680" y="865" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Rcv_di" bpmnElement="M_Rcv">
+        <dc:Bounds x="1750" y="854" width="140" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Close_di" bpmnElement="M_Close">
+        <dc:Bounds x="1750" y="969" width="140" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_ClosedEnd_di" bpmnElement="M_ClosedEnd">
+        <dc:Bounds x="1802" y="1102" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1770" y="1140" width="100" height="28" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Ask_di" bpmnElement="M_Ask" isExpanded="false">
+        <dc:Bounds x="1930" y="854" width="160" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_JA_di" bpmnElement="M_JA" isMarkerVisible="true">
+        <dc:Bounds x="2110" y="865" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Appr_di" bpmnElement="M_Appr" isMarkerVisible="true">
+        <dc:Bounds x="2200" y="865" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2175" y="849" width="100" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Conf2_di" bpmnElement="M_Conf2">
+        <dc:Bounds x="2320" y="854" width="140" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Upd_di" bpmnElement="M_Upd" isExpanded="false">
+        <dc:Bounds x="2555" y="854" width="190" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Decl_di" bpmnElement="M_Decl">
+        <dc:Bounds x="2170" y="969" width="110" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Chk_di" bpmnElement="M_Chk">
+        <dc:Bounds x="1885" y="1084" width="140" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Ans_di" bpmnElement="M_Ans" isMarkerVisible="true">
+        <dc:Bounds x="2110" y="1095" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2085" y="1147" width="100" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Pend_di" bpmnElement="M_Pend">
+        <dc:Bounds x="2230" y="1084" width="140" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_PendEnd_di" bpmnElement="M_PendEnd">
+        <dc:Bounds x="2422" y="1102" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2461" y="1099" width="100" height="42" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Notify_di" bpmnElement="M_Notify" isExpanded="false">
+        <dc:Bounds x="2565" y="1334" width="170" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_RR_di" bpmnElement="M_RR">
+        <dc:Bounds x="2780" y="1334" width="140" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_HG_di" bpmnElement="M_HG" isMarkerVisible="true">
+        <dc:Bounds x="2975" y="1345" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2909" y="1397" width="70" height="28" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Del_di" bpmnElement="M_Del">
+        <dc:Bounds x="3050" y="1249" width="140" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Col_di" bpmnElement="M_Col">
+        <dc:Bounds x="3050" y="1414" width="140" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Mrg_di" bpmnElement="M_Mrg" isMarkerVisible="true">
+        <dc:Bounds x="3235" y="1345" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_SendHO_di" bpmnElement="M_SendHO">
+        <dc:Bounds x="3330" y="1334" width="140" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_RHO_di" bpmnElement="M_RHO">
+        <dc:Bounds x="3535" y="1334" width="150" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Rec_di" bpmnElement="M_Rec">
+        <dc:Bounds x="3705" y="1334" width="130" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_End_di" bpmnElement="M_End">
+        <dc:Bounds x="3862" y="1352" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3830" y="1390" width="100" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DS_Stock_di" bpmnElement="DS_Stock">
+        <dc:Bounds x="765" y="695" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="750" y="747" width="80" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DS_Orders_di" bpmnElement="DS_Orders">
+        <dc:Bounds x="1565" y="990" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1550" y="1042" width="80" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_AskErr_di" bpmnElement="M_AskErr">
+        <dc:Bounds x="1937" y="908" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1891" y="946" width="50" height="28" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_RcvT_di" bpmnElement="M_RcvT">
+        <dc:Bounds x="1802" y="908" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1699" y="912" width="100" height="28" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_31_M_Start_To_M_J1_di" bpmnElement="Flow_31_M_Start_To_M_J1">
+        <di:waypoint x="608" y="600" />
+        <di:waypoint x="645" y="600" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_32_M_J1_To_M_Check_di" bpmnElement="Flow_32_M_J1_To_M_Check">
+        <di:waypoint x="695" y="600" />
+        <di:waypoint x="715" y="600" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_33_M_Check_To_M_Stk_di" bpmnElement="Flow_33_M_Check_To_M_Stk">
+        <di:waypoint x="865" y="600" />
+        <di:waypoint x="905" y="600" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_34_M_Stk_To_M_Ident_di" bpmnElement="Flow_34_M_Stk_To_M_Ident">
+        <di:waypoint x="955" y="600" />
+        <di:waypoint x="985" y="600" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="959" y="582" width="24" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_35_M_Stk_To_M_Short_di" bpmnElement="Flow_35_M_Stk_To_M_Short">
+        <di:waypoint x="930" y="625" />
+        <di:waypoint x="930" y="679" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="934" y="627" width="24" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_36_M_Short_To_M_Rev_di" bpmnElement="Flow_36_M_Short_To_M_Rev">
+        <di:waypoint x="1005" y="715" />
+        <di:waypoint x="1110" y="715" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_37_M_Ident_To_M_Dec_di" bpmnElement="Flow_37_M_Ident_To_M_Dec">
+        <di:waypoint x="1155" y="600" />
+        <di:waypoint x="1380" y="600" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_38_M_Dec_To_M_Conf_di" bpmnElement="Flow_38_M_Dec_To_M_Conf">
+        <di:waypoint x="1520" y="600" />
+        <di:waypoint x="1565" y="600" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_39_M_Conf_To_M_Cancelled_di" bpmnElement="Flow_39_M_Conf_To_M_Cancelled">
+        <di:waypoint x="1615" y="600" />
+        <di:waypoint x="1682" y="600" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1619" y="582" width="24" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_40_M_Conf_To_M_Order_di" bpmnElement="Flow_40_M_Conf_To_M_Order">
+        <di:waypoint x="1590" y="625" />
+        <di:waypoint x="1590" y="854" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1594" y="627" width="24" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_41_M_Order_To_M_JR_di" bpmnElement="Flow_41_M_Order_To_M_JR">
+        <di:waypoint x="1665" y="890" />
+        <di:waypoint x="1680" y="890" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_42_M_JR_To_M_Rcv_di" bpmnElement="Flow_42_M_JR_To_M_Rcv">
+        <di:waypoint x="1730" y="890" />
+        <di:waypoint x="1750" y="890" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_43_M_Rcv_To_M_Ask_di" bpmnElement="Flow_43_M_Rcv_To_M_Ask">
+        <di:waypoint x="1890" y="890" />
+        <di:waypoint x="1930" y="890" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_44_M_Ask_To_M_JA_di" bpmnElement="Flow_44_M_Ask_To_M_JA">
+        <di:waypoint x="2090" y="890" />
+        <di:waypoint x="2110" y="890" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_45_M_JA_To_M_Appr_di" bpmnElement="Flow_45_M_JA_To_M_Appr">
+        <di:waypoint x="2160" y="890" />
+        <di:waypoint x="2200" y="890" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_46_M_Appr_To_M_Conf2_di" bpmnElement="Flow_46_M_Appr_To_M_Conf2">
+        <di:waypoint x="2250" y="890" />
+        <di:waypoint x="2320" y="890" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2254" y="872" width="24" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_47_M_Conf2_To_M_Upd_di" bpmnElement="Flow_47_M_Conf2_To_M_Upd">
+        <di:waypoint x="2460" y="890" />
+        <di:waypoint x="2555" y="890" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_48_M_Upd_To_M_Notify_di" bpmnElement="Flow_48_M_Upd_To_M_Notify">
+        <di:waypoint x="2650" y="926" />
+        <di:waypoint x="2650" y="1334" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_49_M_Appr_To_M_Decl_di" bpmnElement="Flow_49_M_Appr_To_M_Decl">
+        <di:waypoint x="2225" y="915" />
+        <di:waypoint x="2225" y="969" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2229" y="917" width="24" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_50_M_RcvT_To_M_Close_di" bpmnElement="Flow_50_M_RcvT_To_M_Close">
+        <di:waypoint x="1820" y="944" />
+        <di:waypoint x="1820" y="969" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_51_M_Close_To_M_ClosedEnd_di" bpmnElement="Flow_51_M_Close_To_M_ClosedEnd">
+        <di:waypoint x="1820" y="1041" />
+        <di:waypoint x="1820" y="1102" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_52_M_AskErr_To_M_Chk_di" bpmnElement="Flow_52_M_AskErr_To_M_Chk">
+        <di:waypoint x="1955" y="944" />
+        <di:waypoint x="1955" y="1084" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_53_M_Chk_To_M_Ans_di" bpmnElement="Flow_53_M_Chk_To_M_Ans">
+        <di:waypoint x="2025" y="1120" />
+        <di:waypoint x="2110" y="1120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_54_M_Ans_To_M_JA_di" bpmnElement="Flow_54_M_Ans_To_M_JA">
+        <di:waypoint x="2135" y="1095" />
+        <di:waypoint x="2135" y="915" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2139" y="1077" width="24" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_55_M_Ans_To_M_Pend_di" bpmnElement="Flow_55_M_Ans_To_M_Pend">
+        <di:waypoint x="2160" y="1120" />
+        <di:waypoint x="2230" y="1120" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2164" y="1102" width="24" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_56_M_Pend_To_M_PendEnd_di" bpmnElement="Flow_56_M_Pend_To_M_PendEnd">
+        <di:waypoint x="2370" y="1120" />
+        <di:waypoint x="2422" y="1120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_57_M_Notify_To_M_RR_di" bpmnElement="Flow_57_M_Notify_To_M_RR">
+        <di:waypoint x="2735" y="1370" />
+        <di:waypoint x="2780" y="1370" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_58_M_RR_To_M_HG_di" bpmnElement="Flow_58_M_RR_To_M_HG">
+        <di:waypoint x="2920" y="1370" />
+        <di:waypoint x="2975" y="1370" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_59_M_HG_To_M_Del_di" bpmnElement="Flow_59_M_HG_To_M_Del">
+        <di:waypoint x="3000" y="1345" />
+        <di:waypoint x="3000" y="1285" />
+        <di:waypoint x="3050" y="1285" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3004" y="1327" width="52" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_60_M_HG_To_M_Col_di" bpmnElement="Flow_60_M_HG_To_M_Col">
+        <di:waypoint x="3000" y="1395" />
+        <di:waypoint x="3000" y="1450" />
+        <di:waypoint x="3050" y="1450" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3004" y="1397" width="64" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_61_M_Del_To_M_Mrg_di" bpmnElement="Flow_61_M_Del_To_M_Mrg">
+        <di:waypoint x="3190" y="1285" />
+        <di:waypoint x="3260" y="1285" />
+        <di:waypoint x="3260" y="1345" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_62_M_Col_To_M_Mrg_di" bpmnElement="Flow_62_M_Col_To_M_Mrg">
+        <di:waypoint x="3190" y="1450" />
+        <di:waypoint x="3260" y="1450" />
+        <di:waypoint x="3260" y="1395" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_63_M_Mrg_To_M_SendHO_di" bpmnElement="Flow_63_M_Mrg_To_M_SendHO">
+        <di:waypoint x="3285" y="1370" />
+        <di:waypoint x="3330" y="1370" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_64_M_SendHO_To_M_RHO_di" bpmnElement="Flow_64_M_SendHO_To_M_RHO">
+        <di:waypoint x="3470" y="1370" />
+        <di:waypoint x="3535" y="1370" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_65_M_RHO_To_M_Rec_di" bpmnElement="Flow_65_M_RHO_To_M_Rec">
+        <di:waypoint x="3685" y="1370" />
+        <di:waypoint x="3705" y="1370" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_66_M_Rec_To_M_End_di" bpmnElement="Flow_66_M_Rec_To_M_End">
+        <di:waypoint x="3835" y="1370" />
+        <di:waypoint x="3862" y="1370" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_67_M_Rev_To_M_J1_di" bpmnElement="Flow_67_M_Rev_To_M_J1">
+        <di:waypoint x="1180" y="751" />
+        <di:waypoint x="1180" y="780" />
+        <di:waypoint x="670" y="780" />
+        <di:waypoint x="670" y="625" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_68_M_Decl_To_M_JR_di" bpmnElement="Flow_68_M_Decl_To_M_JR">
+        <di:waypoint x="2225" y="1041" />
+        <di:waypoint x="2225" y="1062" />
+        <di:waypoint x="1705" y="1062" />
+        <di:waypoint x="1705" y="915" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Participant_Gateway_di" bpmnElement="Participant_Gateway" isHorizontal="true">
+        <dc:Bounds x="1640" y="1660" width="880" height="280" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_GB_di" bpmnElement="Lane_GB" isHorizontal="true">
+        <dc:Bounds x="1670" y="1810" width="850" height="130" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_GA_di" bpmnElement="Lane_GA" isHorizontal="true">
+        <dc:Bounds x="1670" y="1660" width="850" height="150" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="G_Start_di" bpmnElement="G_Start">
+        <dc:Bounds x="2060" y="1717" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2038" y="1687" width="80" height="28" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="G_Check_di" bpmnElement="G_Check">
+        <dc:Bounds x="2155" y="1699" width="120" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="G_Gw_di" bpmnElement="G_Gw" isMarkerVisible="true">
+        <dc:Bounds x="2310" y="1710" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2285" y="1694" width="100" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="G_Ok_di" bpmnElement="G_Ok">
+        <dc:Bounds x="2392" y="1682" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2341" y="1666" width="55" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="G_No_di" bpmnElement="G_No">
+        <dc:Bounds x="2452" y="1757" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2440" y="1795" width="60" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="G_SStart_di" bpmnElement="G_SStart">
+        <dc:Bounds x="1897" y="1857" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1875" y="1827" width="80" height="28" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="G_Look_di" bpmnElement="G_Look">
+        <dc:Bounds x="1980" y="1839" width="100" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="G_SEnd_di" bpmnElement="G_SEnd">
+        <dc:Bounds x="2107" y="1857" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2085" y="1895" width="80" height="28" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_79_G_Start_To_G_Check_di" bpmnElement="Flow_79_G_Start_To_G_Check">
+        <di:waypoint x="2096" y="1735" />
+        <di:waypoint x="2155" y="1735" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_80_G_Check_To_G_Gw_di" bpmnElement="Flow_80_G_Check_To_G_Gw">
+        <di:waypoint x="2275" y="1735" />
+        <di:waypoint x="2310" y="1735" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_81_G_Gw_To_G_Ok_di" bpmnElement="Flow_81_G_Gw_To_G_Ok">
+        <di:waypoint x="2360" y="1735" />
+        <di:waypoint x="2376" y="1735" />
+        <di:waypoint x="2376" y="1700" />
+        <di:waypoint x="2392" y="1700" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2364" y="1717" width="24" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_82_G_Gw_To_G_No_di" bpmnElement="Flow_82_G_Gw_To_G_No">
+        <di:waypoint x="2335" y="1760" />
+        <di:waypoint x="2335" y="1775" />
+        <di:waypoint x="2452" y="1775" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2339" y="1762" width="24" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_83_G_SStart_To_G_Look_di" bpmnElement="Flow_83_G_SStart_To_G_Look">
+        <di:waypoint x="1933" y="1875" />
+        <di:waypoint x="1980" y="1875" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_84_G_Look_To_G_SEnd_di" bpmnElement="Flow_84_G_Look_To_G_SEnd">
+        <di:waypoint x="2080" y="1875" />
+        <di:waypoint x="2107" y="1875" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Participant_Producers_di" bpmnElement="Participant_Producers" isHorizontal="true">
+        <dc:Bounds x="2560" y="1660" width="1240" height="420" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_P2_di" bpmnElement="Lane_P2" isHorizontal="true">
+        <dc:Bounds x="2590" y="1830" width="1210" height="250" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_P1_di" bpmnElement="Lane_P1" isHorizontal="true">
+        <dc:Bounds x="2590" y="1660" width="1210" height="170" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P_Start_di" bpmnElement="P_Start">
+        <dc:Bounds x="2612" y="1727" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2606" y="1765" width="48" height="28" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P_Read_di" bpmnElement="P_Read">
+        <dc:Bounds x="2690" y="1709" width="120" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P_Ack_di" bpmnElement="P_Ack">
+        <dc:Bounds x="2825" y="1709" width="130" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P_Prep_di" bpmnElement="P_Prep">
+        <dc:Bounds x="2975" y="1709" width="130" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P_Ready_di" bpmnElement="P_Ready">
+        <dc:Bounds x="3162" y="1727" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3194" y="1697" width="90" height="28" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P_HG_di" bpmnElement="P_HG" isMarkerVisible="true">
+        <dc:Bounds x="3245" y="1900" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3169" y="1870" width="80" height="28" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P_Deliver_di" bpmnElement="P_Deliver">
+        <dc:Bounds x="3370" y="1889" width="120" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P_Coll_di" bpmnElement="P_Coll">
+        <dc:Bounds x="3370" y="1984" width="120" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P_Mrg_di" bpmnElement="P_Mrg" isMarkerVisible="true">
+        <dc:Bounds x="3515" y="1947" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P_End_di" bpmnElement="P_End">
+        <dc:Bounds x="3592" y="1954" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3565" y="1992" width="90" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_69_P_Start_To_P_Read_di" bpmnElement="Flow_69_P_Start_To_P_Read">
+        <di:waypoint x="2648" y="1745" />
+        <di:waypoint x="2690" y="1745" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_70_P_Read_To_P_Ack_di" bpmnElement="Flow_70_P_Read_To_P_Ack">
+        <di:waypoint x="2810" y="1745" />
+        <di:waypoint x="2825" y="1745" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_71_P_Ack_To_P_Prep_di" bpmnElement="Flow_71_P_Ack_To_P_Prep">
+        <di:waypoint x="2955" y="1745" />
+        <di:waypoint x="2975" y="1745" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_72_P_Prep_To_P_Ready_di" bpmnElement="Flow_72_P_Prep_To_P_Ready">
+        <di:waypoint x="3105" y="1745" />
+        <di:waypoint x="3162" y="1745" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_73_P_Ready_To_P_HG_di" bpmnElement="Flow_73_P_Ready_To_P_HG">
+        <di:waypoint x="3198" y="1745" />
+        <di:waypoint x="3270" y="1745" />
+        <di:waypoint x="3270" y="1900" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_74_P_HG_To_P_Deliver_di" bpmnElement="Flow_74_P_HG_To_P_Deliver">
+        <di:waypoint x="3295" y="1925" />
+        <di:waypoint x="3370" y="1925" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3299" y="1907" width="52" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_75_P_HG_To_P_Coll_di" bpmnElement="Flow_75_P_HG_To_P_Coll">
+        <di:waypoint x="3270" y="1950" />
+        <di:waypoint x="3270" y="2020" />
+        <di:waypoint x="3370" y="2020" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3274" y="1952" width="64" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_76_P_Deliver_To_P_Mrg_di" bpmnElement="Flow_76_P_Deliver_To_P_Mrg">
+        <di:waypoint x="3490" y="1925" />
+        <di:waypoint x="3540" y="1925" />
+        <di:waypoint x="3540" y="1947" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_77_P_Coll_To_P_Mrg_di" bpmnElement="Flow_77_P_Coll_To_P_Mrg">
+        <di:waypoint x="3490" y="2020" />
+        <di:waypoint x="3540" y="2020" />
+        <di:waypoint x="3540" y="1997" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_78_P_Mrg_To_P_End_di" bpmnElement="Flow_78_P_Mrg_To_P_End">
+        <di:waypoint x="3565" y="1972" />
+        <di:waypoint x="3592" y="1972" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DataAssoc_29_di" bpmnElement="DataAssoc_29">
+        <di:waypoint x="790" y="695" />
+        <di:waypoint x="790" y="636" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DataAssoc_30_di" bpmnElement="DataAssoc_30">
+        <di:waypoint x="1590" y="926" />
+        <di:waypoint x="1590" y="990" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Message_85_Basket_di" bpmnElement="Message_85_Basket">
+        <di:waypoint x="590" y="151" />
+        <di:waypoint x="590" y="582" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Message_86_ItemsUnavailable_di" bpmnElement="Message_86_ItemsUnavailable">
+        <di:waypoint x="885" y="679" />
+        <di:waypoint x="885" y="213" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Message_87_OrderSummary_di" bpmnElement="Message_87_OrderSummary">
+        <di:waypoint x="1070" y="564" />
+        <di:waypoint x="1070" y="133" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Message_88_RevisedBasket_di" bpmnElement="Message_88_RevisedBasket">
+        <di:waypoint x="1200" y="231" />
+        <di:waypoint x="1200" y="679" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1204" y="237" width="87" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Message_89_PurchaseConfirmed_di" bpmnElement="Message_89_PurchaseConfirmed">
+        <di:waypoint x="1430" y="151" />
+        <di:waypoint x="1430" y="564" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1436" y="462" width="110" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Message_90_CancelOrder_di" bpmnElement="Message_90_CancelOrder">
+        <di:waypoint x="1480" y="213" />
+        <di:waypoint x="1480" y="564" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Message_91_PaymentDetails_di" bpmnElement="Message_91_PaymentDetails">
+        <di:waypoint x="1850" y="151" />
+        <di:waypoint x="1850" y="854" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1854" y="157" width="93" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Message_92_OrderConfirmation_di" bpmnElement="Message_92_OrderConfirmation">
+        <di:waypoint x="2390" y="854" />
+        <di:waypoint x="2390" y="133" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Message_93_PaymentDeclined_di" bpmnElement="Message_93_PaymentDeclined">
+        <di:waypoint x="2262" y="969" />
+        <di:waypoint x="2262" y="293" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Message_94_PaymentPending_di" bpmnElement="Message_94_PaymentPending">
+        <di:waypoint x="2300" y="1084" />
+        <di:waypoint x="2300" y="213" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Message_95_DeliveryTime_di" bpmnElement="Message_95_DeliveryTime">
+        <di:waypoint x="3400" y="1334" />
+        <di:waypoint x="3400" y="133" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Message_96_PaymentRequest_di" bpmnElement="Message_96_PaymentRequest">
+        <di:waypoint x="2078" y="926" />
+        <di:waypoint x="2078" y="1717" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Message_97_GatewayApproved_di" bpmnElement="Message_97_GatewayApproved">
+        <di:waypoint x="2410" y="1682" />
+        <di:waypoint x="2410" y="1620" />
+        <di:waypoint x="2040" y="1620" />
+        <di:waypoint x="2040" y="926" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Message_98_GatewayDeclined_di" bpmnElement="Message_98_GatewayDeclined">
+        <di:waypoint x="2470" y="1757" />
+        <di:waypoint x="2470" y="1635" />
+        <di:waypoint x="2058" y="1635" />
+        <di:waypoint x="2058" y="926" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Message_99_StatusEnquiry_di" bpmnElement="Message_99_StatusEnquiry">
+        <di:waypoint x="1915" y="1156" />
+        <di:waypoint x="1915" y="1857" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Message_100_StatusResponse_di" bpmnElement="Message_100_StatusResponse">
+        <di:waypoint x="2125" y="1893" />
+        <di:waypoint x="2125" y="1650" />
+        <di:waypoint x="1995" y="1650" />
+        <di:waypoint x="1995" y="1156" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Message_101_OrderNotice_di" bpmnElement="Message_101_OrderNotice">
+        <di:waypoint x="2630" y="1406" />
+        <di:waypoint x="2630" y="1727" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Message_102_ProducerConfirms_di" bpmnElement="Message_102_ProducerConfirms">
+        <di:waypoint x="2890" y="1709" />
+        <di:waypoint x="2890" y="1595" />
+        <di:waypoint x="2710" y="1595" />
+        <di:waypoint x="2710" y="1406" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2894" y="1689" width="104" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Message_103_ReadyForHandover_di" bpmnElement="Message_103_ReadyForHandover">
+        <di:waypoint x="3180" y="1727" />
+        <di:waypoint x="3180" y="1608" />
+        <di:waypoint x="2905" y="1608" />
+        <di:waypoint x="2905" y="1406" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Message_104_HandOverDone_di" bpmnElement="Message_104_HandOverDone">
+        <di:waypoint x="3610" y="1954" />
+        <di:waypoint x="3610" y="1406" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+  <bpmndi:BPMNDiagram id="M_Ident_Diagram">
+    <bpmndi:BPMNPlane id="M_Ident_Plane" bpmnElement="M_Ident">
+      <bpmndi:BPMNShape id="M_Ident__s_di" bpmnElement="M_Ident__s">
+        <dc:Bounds x="112" y="237" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="80" y="275" width="100" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Ident__p_di" bpmnElement="M_Ident__p">
+        <dc:Bounds x="205" y="219" width="130" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Ident__d_di" bpmnElement="M_Ident__d">
+        <dc:Bounds x="345" y="219" width="130" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Ident__n_di" bpmnElement="M_Ident__n">
+        <dc:Bounds x="485" y="219" width="130" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Ident__o_di" bpmnElement="M_Ident__o">
+        <dc:Bounds x="625" y="219" width="130" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Ident__e_di" bpmnElement="M_Ident__e">
+        <dc:Bounds x="812" y="237" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="780" y="275" width="100" height="28" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_105_M_Ident__s_To_M_Ident__p_di" bpmnElement="Flow_105_M_Ident__s_To_M_Ident__p">
+        <di:waypoint x="148" y="255" />
+        <di:waypoint x="205" y="255" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_106_M_Ident__p_To_M_Ident__d_di" bpmnElement="Flow_106_M_Ident__p_To_M_Ident__d">
+        <di:waypoint x="335" y="255" />
+        <di:waypoint x="345" y="255" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_107_M_Ident__d_To_M_Ident__n_di" bpmnElement="Flow_107_M_Ident__d_To_M_Ident__n">
+        <di:waypoint x="475" y="255" />
+        <di:waypoint x="485" y="255" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_108_M_Ident__n_To_M_Ident__o_di" bpmnElement="Flow_108_M_Ident__n_To_M_Ident__o">
+        <di:waypoint x="615" y="255" />
+        <di:waypoint x="625" y="255" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_109_M_Ident__o_To_M_Ident__e_di" bpmnElement="Flow_109_M_Ident__o_To_M_Ident__e">
+        <di:waypoint x="755" y="255" />
+        <di:waypoint x="812" y="255" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+  <bpmndi:BPMNDiagram id="M_Order_Diagram">
+    <bpmndi:BPMNPlane id="M_Order_Plane" bpmnElement="M_Order">
+      <bpmndi:BPMNShape id="M_Order__s_di" bpmnElement="M_Order__s">
+        <dc:Bounds x="112" y="237" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="80" y="275" width="100" height="28" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Order__o_di" bpmnElement="M_Order__o">
+        <dc:Bounds x="205" y="219" width="130" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Order__sp_di" bpmnElement="M_Order__sp">
+        <dc:Bounds x="345" y="219" width="130" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Order__e_di" bpmnElement="M_Order__e">
+        <dc:Bounds x="532" y="237" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="500" y="275" width="100" height="28" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_110_M_Order__s_To_M_Order__o_di" bpmnElement="Flow_110_M_Order__s_To_M_Order__o">
+        <di:waypoint x="148" y="255" />
+        <di:waypoint x="205" y="255" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_111_M_Order__o_To_M_Order__sp_di" bpmnElement="Flow_111_M_Order__o_To_M_Order__sp">
+        <di:waypoint x="335" y="255" />
+        <di:waypoint x="345" y="255" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_112_M_Order__sp_To_M_Order__e_di" bpmnElement="Flow_112_M_Order__sp_To_M_Order__e">
+        <di:waypoint x="475" y="255" />
+        <di:waypoint x="532" y="255" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+  <bpmndi:BPMNDiagram id="M_Ask_Diagram">
+    <bpmndi:BPMNPlane id="M_Ask_Plane" bpmnElement="M_Ask">
+      <bpmndi:BPMNShape id="M_Ask__s_di" bpmnElement="M_Ask__s">
+        <dc:Bounds x="112" y="237" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="80" y="275" width="100" height="28" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Ask__j_di" bpmnElement="M_Ask__j" isMarkerVisible="true">
+        <dc:Bounds x="245" y="230" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Ask__send_di" bpmnElement="M_Ask__send">
+        <dc:Bounds x="345" y="219" width="130" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Ask__eg_di" bpmnElement="M_Ask__eg">
+        <dc:Bounds x="525" y="230" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="500" y="214" width="100" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Ask__ok_di" bpmnElement="M_Ask__ok">
+        <dc:Bounds x="672" y="132" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="640" y="170" width="100" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Ask__eok_di" bpmnElement="M_Ask__eok">
+        <dc:Bounds x="812" y="132" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="780" y="170" width="100" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Ask__no_di" bpmnElement="M_Ask__no">
+        <dc:Bounds x="672" y="237" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="640" y="275" width="100" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Ask__eno_di" bpmnElement="M_Ask__eno">
+        <dc:Bounds x="812" y="237" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="780" y="275" width="100" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Ask__ct_di" bpmnElement="M_Ask__ct">
+        <dc:Bounds x="672" y="342" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="630" y="380" width="120" height="28" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Ask__g_di" bpmnElement="M_Ask__g" isMarkerVisible="true">
+        <dc:Bounds x="805" y="335" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="780" y="319" width="100" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Ask__w_di" bpmnElement="M_Ask__w">
+        <dc:Bounds x="905" y="324" width="130" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Ask__ee_di" bpmnElement="M_Ask__ee">
+        <dc:Bounds x="952" y="447" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="915" y="485" width="110" height="28" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_113_M_Ask__s_To_M_Ask__j_di" bpmnElement="Flow_113_M_Ask__s_To_M_Ask__j">
+        <di:waypoint x="148" y="255" />
+        <di:waypoint x="245" y="255" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_114_M_Ask__j_To_M_Ask__send_di" bpmnElement="Flow_114_M_Ask__j_To_M_Ask__send">
+        <di:waypoint x="295" y="255" />
+        <di:waypoint x="345" y="255" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_115_M_Ask__send_To_M_Ask__eg_di" bpmnElement="Flow_115_M_Ask__send_To_M_Ask__eg">
+        <di:waypoint x="475" y="255" />
+        <di:waypoint x="525" y="255" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_116_M_Ask__eg_To_M_Ask__ok_di" bpmnElement="Flow_116_M_Ask__eg_To_M_Ask__ok">
+        <di:waypoint x="550" y="230" />
+        <di:waypoint x="550" y="150" />
+        <di:waypoint x="672" y="150" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_117_M_Ask__ok_To_M_Ask__eok_di" bpmnElement="Flow_117_M_Ask__ok_To_M_Ask__eok">
+        <di:waypoint x="708" y="150" />
+        <di:waypoint x="812" y="150" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_118_M_Ask__eg_To_M_Ask__no_di" bpmnElement="Flow_118_M_Ask__eg_To_M_Ask__no">
+        <di:waypoint x="575" y="255" />
+        <di:waypoint x="672" y="255" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_119_M_Ask__no_To_M_Ask__eno_di" bpmnElement="Flow_119_M_Ask__no_To_M_Ask__eno">
+        <di:waypoint x="708" y="255" />
+        <di:waypoint x="812" y="255" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_120_M_Ask__eg_To_M_Ask__ct_di" bpmnElement="Flow_120_M_Ask__eg_To_M_Ask__ct">
+        <di:waypoint x="550" y="280" />
+        <di:waypoint x="550" y="360" />
+        <di:waypoint x="672" y="360" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_121_M_Ask__ct_To_M_Ask__g_di" bpmnElement="Flow_121_M_Ask__ct_To_M_Ask__g">
+        <di:waypoint x="708" y="360" />
+        <di:waypoint x="805" y="360" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_122_M_Ask__g_To_M_Ask__w_di" bpmnElement="Flow_122_M_Ask__g_To_M_Ask__w">
+        <di:waypoint x="855" y="360" />
+        <di:waypoint x="905" y="360" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="859" y="342" width="24" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_123_M_Ask__g_To_M_Ask__ee_di" bpmnElement="Flow_123_M_Ask__g_To_M_Ask__ee">
+        <di:waypoint x="830" y="385" />
+        <di:waypoint x="830" y="465" />
+        <di:waypoint x="952" y="465" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="834" y="387" width="24" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_124_M_Ask__w_To_M_Ask__j_di" bpmnElement="Flow_124_M_Ask__w_To_M_Ask__j">
+        <di:waypoint x="970" y="324" />
+        <di:waypoint x="970" y="103" />
+        <di:waypoint x="270" y="103" />
+        <di:waypoint x="270" y="230" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+  <bpmndi:BPMNDiagram id="M_Upd_Diagram">
+    <bpmndi:BPMNPlane id="M_Upd_Plane" bpmnElement="M_Upd">
+      <bpmndi:BPMNShape id="M_Upd__s_di" bpmnElement="M_Upd__s">
+        <dc:Bounds x="112" y="237" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="80" y="275" width="100" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Upd__st_di" bpmnElement="M_Upd__st">
+        <dc:Bounds x="205" y="219" width="130" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Upd__sh_di" bpmnElement="M_Upd__sh">
+        <dc:Bounds x="345" y="219" width="130" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Upd__co_di" bpmnElement="M_Upd__co">
+        <dc:Bounds x="485" y="219" width="130" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Upd__r_di" bpmnElement="M_Upd__r">
+        <dc:Bounds x="625" y="219" width="130" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Upd__e_di" bpmnElement="M_Upd__e">
+        <dc:Bounds x="812" y="237" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="780" y="275" width="100" height="28" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_125_M_Upd__s_To_M_Upd__st_di" bpmnElement="Flow_125_M_Upd__s_To_M_Upd__st">
+        <di:waypoint x="148" y="255" />
+        <di:waypoint x="205" y="255" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_126_M_Upd__st_To_M_Upd__sh_di" bpmnElement="Flow_126_M_Upd__st_To_M_Upd__sh">
+        <di:waypoint x="335" y="255" />
+        <di:waypoint x="345" y="255" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_127_M_Upd__sh_To_M_Upd__co_di" bpmnElement="Flow_127_M_Upd__sh_To_M_Upd__co">
+        <di:waypoint x="475" y="255" />
+        <di:waypoint x="485" y="255" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_128_M_Upd__co_To_M_Upd__r_di" bpmnElement="Flow_128_M_Upd__co_To_M_Upd__r">
+        <di:waypoint x="615" y="255" />
+        <di:waypoint x="625" y="255" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_129_M_Upd__r_To_M_Upd__e_di" bpmnElement="Flow_129_M_Upd__r_To_M_Upd__e">
+        <di:waypoint x="755" y="255" />
+        <di:waypoint x="812" y="255" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+  <bpmndi:BPMNDiagram id="M_Notify_Diagram">
+    <bpmndi:BPMNPlane id="M_Notify_Plane" bpmnElement="M_Notify">
+      <bpmndi:BPMNShape id="M_Notify__s_di" bpmnElement="M_Notify__s">
+        <dc:Bounds x="112" y="237" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="80" y="275" width="100" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Notify__g_di" bpmnElement="M_Notify__g" isMarkerVisible="true">
+        <dc:Bounds x="245" y="230" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="169" y="200" width="80" height="28" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Notify__a_di" bpmnElement="M_Notify__a">
+        <dc:Bounds x="345" y="114" width="130" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Notify__b_di" bpmnElement="M_Notify__b">
+        <dc:Bounds x="345" y="324" width="130" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Notify__j_di" bpmnElement="M_Notify__j" isMarkerVisible="true">
+        <dc:Bounds x="525" y="230" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Notify__c_di" bpmnElement="M_Notify__c">
+        <dc:Bounds x="672" y="237" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="640" y="275" width="100" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Notify__e1_di" bpmnElement="M_Notify__e1">
+        <dc:Bounds x="812" y="237" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="780" y="275" width="100" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_130_M_Notify__s_To_M_Notify__g_di" bpmnElement="Flow_130_M_Notify__s_To_M_Notify__g">
+        <di:waypoint x="148" y="255" />
+        <di:waypoint x="245" y="255" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_131_M_Notify__g_To_M_Notify__a_di" bpmnElement="Flow_131_M_Notify__g_To_M_Notify__a">
+        <di:waypoint x="270" y="230" />
+        <di:waypoint x="270" y="150" />
+        <di:waypoint x="345" y="150" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="274" y="212" width="24" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_132_M_Notify__g_To_M_Notify__b_di" bpmnElement="Flow_132_M_Notify__g_To_M_Notify__b">
+        <di:waypoint x="270" y="280" />
+        <di:waypoint x="270" y="360" />
+        <di:waypoint x="345" y="360" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="274" y="282" width="24" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_133_M_Notify__a_To_M_Notify__j_di" bpmnElement="Flow_133_M_Notify__a_To_M_Notify__j">
+        <di:waypoint x="475" y="150" />
+        <di:waypoint x="550" y="150" />
+        <di:waypoint x="550" y="230" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_134_M_Notify__b_To_M_Notify__j_di" bpmnElement="Flow_134_M_Notify__b_To_M_Notify__j">
+        <di:waypoint x="475" y="360" />
+        <di:waypoint x="550" y="360" />
+        <di:waypoint x="550" y="280" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_135_M_Notify__j_To_M_Notify__c_di" bpmnElement="Flow_135_M_Notify__j_To_M_Notify__c">
+        <di:waypoint x="575" y="255" />
+        <di:waypoint x="672" y="255" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_136_M_Notify__c_To_M_Notify__e1_di" bpmnElement="Flow_136_M_Notify__c_To_M_Notify__e1">
+        <di:waypoint x="708" y="255" />
+        <di:waypoint x="812" y="255" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
