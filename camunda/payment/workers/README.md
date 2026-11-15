@@ -2,7 +2,7 @@
 
 Owner: Mackenzie · Jira: SCRUM-14 (US9), SCRUM-15 (US10) · Process ID: `PaymentOrderProcessing`
 
-The `workers/` folder contains the Node.js job workers that complete the service tasks in the Payment & Order Processing process. The business rules are in `logic.js` (no Camunda code, so they can be unit tested) and `worker.js` connects them to Camunda.
+This folder contains the Node.js job workers that complete the service tasks in the Payment & Order Processing process. The business rules are in `logic.js` (no Camunda code, so they can be unit tested) and `worker.js` connects them to Camunda.
 
 ## Job types
 
@@ -30,7 +30,7 @@ basketId, customerId: strings
 
 All money is rounded to 2 dp. Internally it is handled in whole pence so totals always add up exactly.
 
-Simulated stock is seeded from `workers/stock.json` (PRD-101: 20, PRD-102: 30, PRD-201: 15, PRD-202: 25, PRD-301: 10) and reset each time the worker starts.
+Simulated stock is seeded from `stock.json` (PRD-101: 20, PRD-102: 30, PRD-201: 15, PRD-202: 25, PRD-301: 10) and reset each time the worker starts.
 
 ## How to run
 
@@ -43,29 +43,18 @@ npm test          # unit tests for logic.js
 node worker.js    # leave running
 ```
 
-In a second terminal, also run Rohan's payment service worker (`camunda/payment-service`, `node worker.js`) so the payment step is completed. Then deploy the Payment & Order Processing process and start an instance with variables such as:
+In a second terminal, also run Rohan's payment service worker (`camunda/payment-service`, `node worker.js`), which completes the `request-payment` task.
 
-```json
-{
-  "basketId": "B-1",
-  "customerId": "C-1",
-  "orderTotal": 22.87,
-  "items": [
-    { "productId": "PRD-101", "productName": "Free-range eggs", "producerId": "P1", "producerName": "Hillside Farm", "quantity": 2, "unitPrice": 3.20 },
-    { "productId": "PRD-201", "productName": "Sourdough loaf", "producerId": "P2", "producerName": "Avon Bakery", "quantity": 1, "unitPrice": 4.50 },
-    { "productId": "PRD-202", "productName": "Strawberry jam", "producerId": "P2", "producerName": "Avon Bakery", "quantity": 3, "unitPrice": 3.99 }
-  ],
-  "producerOrders": [
-    { "producerId": "P1", "producerName": "Hillside Farm", "subtotal": 6.40, "deliveryMethod": "collection",
-      "items": [{ "productId": "PRD-101", "productName": "Free-range eggs", "producerId": "P1", "producerName": "Hillside Farm", "quantity": 2, "unitPrice": 3.20 }] },
-    { "producerId": "P2", "producerName": "Avon Bakery", "subtotal": 16.47, "deliveryMethod": "delivery",
-      "items": [
-        { "productId": "PRD-201", "productName": "Sourdough loaf", "producerId": "P2", "producerName": "Avon Bakery", "quantity": 1, "unitPrice": 4.50 },
-        { "productId": "PRD-202", "productName": "Strawberry jam", "producerId": "P2", "producerName": "Avon Bakery", "quantity": 3, "unitPrice": 3.99 }
-      ] }
-  ]
-}
-```
+Then deploy `camunda/payment/payment-order-processing.bpmn` together with `camunda/payment/enter-payment-details.form`, and start an instance with checkout's review-step data: `camunda/checkout/test-data/review-order-variables.json`. These are the same variables checkout hands over (`basketId`, `customerId`, `items`, `producerOrders`, `orderTotal`), so this also tests the hand-off.
+
+With that data the expected results are:
+
+| Variable | Expected |
+|---|---|
+| `producerOrders` | 3 entries: PROD-01 £19.20, PROD-02 £12.80, PROD-03 £4.25 |
+| `stockUpdates` | PRD-101 → 19, PRD-102 → 29, PRD-201 → 13, PRD-202 → 24, PRD-301 → 9 |
+| `producerAmounts` | net £18.24, £12.16, £4.04 |
+| `marketplaceCommission` | £1.81 (and £18.24 + £12.16 + £4.04 + £1.81 = £36.25, the order total) |
 
 ## Open questions
 
