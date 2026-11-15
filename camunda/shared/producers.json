@@ -1,0 +1,14 @@
+{
+  "PROD-01": {
+    "producerName": "Hollybush Farm",
+    "deliveryMethod": "Home delivery"
+  },
+  "PROD-02": {
+    "producerName": "Chew Valley Dairy",
+    "deliveryMethod": "Collection from Chew Valley farm shop"
+  },
+  "PROD-03": {
+    "producerName": "Stokes Croft Bakery",
+    "deliveryMethod": "Home delivery"
+  }
+}
