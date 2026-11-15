@@ -7,13 +7,13 @@ const stock = {
   "PRD-301": 8
 };
 
-// Example seasonal availability for testing.
-// Replace with your group's actual product data.
+// Temporary seasonal availability.
+// Replace with the group's agreed product data.
 const inSeason = {
   "PRD-101": true,
   "PRD-102": true,
   "PRD-201": true,
-  "PRD-202": false,
+  "PRD-202": true, // Milk is available
   "PRD-301": true
 };
 
@@ -24,7 +24,12 @@ function checkStock(items) {
     const available = stock[item.productId] ?? 0;
     const isInSeason = inSeason[item.productId] === true;
 
-    if (!isInSeason || available < item.quantity || item.quantity <= 0) {
+    if (
+      !isInSeason ||
+      available < item.quantity ||
+      !Number.isInteger(item.quantity) ||
+      item.quantity <= 0
+    ) {
       stockIssues.push({
         productId: item.productId,
         productName: item.productName,
@@ -32,17 +37,21 @@ function checkStock(items) {
         available,
         reason: !isInSeason
           ? "Product unavailable or out of season"
-          : item.quantity <= 0
+          : !Number.isInteger(item.quantity) || item.quantity <= 0
           ? "Invalid quantity"
           : "Insufficient stock"
       });
     }
   }
 
+  const allInStock = stockIssues.length === 0;
+
   return {
-    stockAvailable: stockIssues.length === 0,
+    allInStock,
+    stockAvailable: allInStock,
     stockIssues
   };
 }
 
 module.exports = { checkStock };
+
