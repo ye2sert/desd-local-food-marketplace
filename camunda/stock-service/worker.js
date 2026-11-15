@@ -1,11 +1,8 @@
 
-const stock = {
-  "PRD-101": 10,
-  "PRD-102": 20,
-  "PRD-201": 5,
-  "PRD-202": 15,
-  "PRD-301": 8
-};
+const fs = require('fs');
+const path = require('path');
+
+const stockFile = path.join(__dirname, '..', 'shared', 'stock.json');
 
 // Temporary seasonal availability.
 // Replace with the group's agreed product data.
@@ -13,11 +10,13 @@ const inSeason = {
   "PRD-101": true,
   "PRD-102": true,
   "PRD-201": true,
-  "PRD-202": true, // Milk is available
+  "PRD-202": true,
   "PRD-301": true
 };
 
 function checkStock(items) {
+  // Read fresh stock data for every checkout.
+  const stock = JSON.parse(fs.readFileSync(stockFile, 'utf8'));
   const stockIssues = [];
 
   for (const item of items) {
@@ -26,9 +25,9 @@ function checkStock(items) {
 
     if (
       !isInSeason ||
-      available < item.quantity ||
       !Number.isInteger(item.quantity) ||
-      item.quantity <= 0
+      item.quantity <= 0 ||
+      available < item.quantity
     ) {
       stockIssues.push({
         productId: item.productId,
