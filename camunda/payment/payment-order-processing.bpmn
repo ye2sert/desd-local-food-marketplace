@@ -1,0 +1,405 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:modeler="http://camunda.org/schema/modeler/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_PaymentOrderProcessing" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.52.0" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.10.0">
+  <bpmn:collaboration id="Collaboration_PaymentOrderProcessing">
+    <bpmn:participant id="Participant_PaymentService" name="Payment Service (simulated)" />
+    <bpmn:participant id="Participant_Marketplace" name="Marketplace – Payment &amp; Order Processing" processRef="PaymentOrderProcessing" />
+    <bpmn:participant id="Participant_Producer" name="Producer" />
+    <bpmn:messageFlow id="MessageFlow_PaymentRequest" name="Payment request" sourceRef="Task_RequestPayment" targetRef="Participant_PaymentService" />
+    <bpmn:messageFlow id="MessageFlow_PaymentResponse" name="Payment result" sourceRef="Participant_PaymentService" targetRef="Task_RequestPayment" />
+    <bpmn:messageFlow id="MessageFlow_ProducerNotification" name="Order notification" sourceRef="Task_NotifyProducers" targetRef="Participant_Producer" />
+    <bpmn:group id="Group_CalledByCheckout" categoryValueRef="CategoryValue_CalledByCheckout" />
+  </bpmn:collaboration>
+  <bpmn:category id="Category_Notes">
+    <bpmn:categoryValue id="CategoryValue_CalledByCheckout" value="Called by Checkout via call activity (PaymentOrderProcessing)" />
+  </bpmn:category>
+  <bpmn:error id="Error_PaymentServiceUnavailable" name="Payment service unavailable" errorCode="PAYMENT_SERVICE_UNAVAILABLE" />
+  <bpmn:process id="PaymentOrderProcessing" name="Payment &amp; Order Processing" isExecutable="true">
+    <bpmn:laneSet id="LaneSet_Marketplace">
+      <bpmn:lane id="Lane_Customer" name="Customer">
+        <bpmn:flowNodeRef>Gateway_MergePayment</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_EnterPaymentDetails</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_RetryOrCancel</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_RetryChoice</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_OrderCancelled</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Platform" name="Marketplace Platform">
+        <bpmn:flowNodeRef>Start_OrderReadyForPayment</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_CreateOrder</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SplitOrder</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_MergeRequest</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_RequestPayment</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Boundary_PaymentServiceError</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Boundary_PaymentTimeout</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_PaymentResult</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_ServiceDown</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_IncrementRetryCount</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_RetriesLeft</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Timer_WaitBeforeRetry</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_FlagForAdmin</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_NotifyCustomerFailure</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_PaymentFailedFlagged</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SendConfirmation</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>SubProcess_ProcessConfirmedOrder</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_NotifyProducers</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_ProducersNotified</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Start_OrderReadyForPayment" name="Order ready for payment">
+      <bpmn:outgoing>Flow_StartToCreateOrder</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="Task_CreateOrder" name="Create marketplace order">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="create-order" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_StartToCreateOrder</bpmn:incoming>
+      <bpmn:outgoing>Flow_CreateOrderToSplit</bpmn:outgoing>
+      <bpmn:dataOutputAssociation id="DataAssoc_CreateOrderToOrders">
+        <bpmn:targetRef>DataStore_Orders</bpmn:targetRef>
+      </bpmn:dataOutputAssociation>
+    </bpmn:serviceTask>
+    <bpmn:dataStoreReference id="DataStore_Orders" name="Orders" />
+    <bpmn:serviceTask id="Task_SplitOrder" name="Split order by producer">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="split-order-by-producer" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_CreateOrderToSplit</bpmn:incoming>
+      <bpmn:outgoing>Flow_SplitToMergePayment</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="Gateway_MergePayment">
+      <bpmn:incoming>Flow_SplitToMergePayment</bpmn:incoming>
+      <bpmn:incoming>Flow_Retry</bpmn:incoming>
+      <bpmn:outgoing>Flow_MergeToEnterDetails</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Task_EnterPaymentDetails" name="Enter payment details">
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+        <zeebe:formDefinition formId="enter-payment-details" />
+        <zeebe:ioMapping>
+          <zeebe:output source="=paymentMethod" target="paymentMethod" />
+          <zeebe:output source="=paymentToken" target="paymentToken" />
+          <zeebe:output source="=0" target="retryCount" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_MergeToEnterDetails</bpmn:incoming>
+      <bpmn:outgoing>Flow_EnterDetailsToMergeRequest</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gateway_MergeRequest">
+      <bpmn:incoming>Flow_EnterDetailsToMergeRequest</bpmn:incoming>
+      <bpmn:incoming>Flow_WaitToMergeRequest</bpmn:incoming>
+      <bpmn:outgoing>Flow_MergeToRequestPayment</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Task_RequestPayment" name="Request payment">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="request-payment" retries="1" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=orderTotal" target="amount" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_MergeToRequestPayment</bpmn:incoming>
+      <bpmn:outgoing>Flow_RequestToResult</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:boundaryEvent id="Boundary_PaymentServiceError" name="Service unavailable" attachedToRef="Task_RequestPayment">
+      <bpmn:outgoing>Flow_ErrorToServiceDown</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="ErrorDef_PaymentService" errorRef="Error_PaymentServiceUnavailable" />
+    </bpmn:boundaryEvent>
+    <bpmn:boundaryEvent id="Boundary_PaymentTimeout" name="No response (30s)" attachedToRef="Task_RequestPayment">
+      <bpmn:outgoing>Flow_TimeoutToServiceDown</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerDef_PaymentTimeout">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT30S</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:exclusiveGateway id="Gateway_PaymentResult" name="Payment result?" default="Flow_PaymentDeclined">
+      <bpmn:incoming>Flow_RequestToResult</bpmn:incoming>
+      <bpmn:outgoing>Flow_PaymentSuccess</bpmn:outgoing>
+      <bpmn:outgoing>Flow_PaymentDeclined</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="Flow_PaymentSuccess" name="Successful" sourceRef="Gateway_PaymentResult" targetRef="Task_SendConfirmation">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=paymentStatus = "SUCCESS"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_PaymentDeclined" name="Declined" sourceRef="Gateway_PaymentResult" targetRef="Task_RetryOrCancel" />
+    <bpmn:userTask id="Task_RetryOrCancel" name="Payment declined – retry or cancel?">
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+        <zeebe:formDefinition formId="payment-declined" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_PaymentDeclined</bpmn:incoming>
+      <bpmn:outgoing>Flow_RetryOrCancelToGateway</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gateway_RetryChoice" name="Customer choice?" default="Flow_Cancel">
+      <bpmn:incoming>Flow_RetryOrCancelToGateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_Retry</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Cancel</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="Flow_Retry" name="Retry" sourceRef="Gateway_RetryChoice" targetRef="Gateway_MergePayment">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=retryChoice = "retry"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Cancel" name="Cancel" sourceRef="Gateway_RetryChoice" targetRef="End_OrderCancelled" />
+    <bpmn:endEvent id="End_OrderCancelled" name="Order cancelled">
+      <bpmn:incoming>Flow_Cancel</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:exclusiveGateway id="Gateway_ServiceDown">
+      <bpmn:incoming>Flow_ErrorToServiceDown</bpmn:incoming>
+      <bpmn:incoming>Flow_TimeoutToServiceDown</bpmn:incoming>
+      <bpmn:outgoing>Flow_ServiceDownToIncrement</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:scriptTask id="Task_IncrementRetryCount" name="Increment retry count">
+      <bpmn:extensionElements>
+        <zeebe:script expression="=retryCount + 1" resultVariable="retryCount" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_ServiceDownToIncrement</bpmn:incoming>
+      <bpmn:outgoing>Flow_IncrementToRetriesLeft</bpmn:outgoing>
+    </bpmn:scriptTask>
+    <bpmn:exclusiveGateway id="Gateway_RetriesLeft" name="Retries left?" default="Flow_NoRetriesLeft">
+      <bpmn:incoming>Flow_IncrementToRetriesLeft</bpmn:incoming>
+      <bpmn:outgoing>Flow_RetriesLeft</bpmn:outgoing>
+      <bpmn:outgoing>Flow_NoRetriesLeft</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="Flow_RetriesLeft" name="Yes" sourceRef="Gateway_RetriesLeft" targetRef="Timer_WaitBeforeRetry">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=retryCount &lt; 3</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_NoRetriesLeft" name="No" sourceRef="Gateway_RetriesLeft" targetRef="Task_FlagForAdmin" />
+    <bpmn:intermediateCatchEvent id="Timer_WaitBeforeRetry" name="Wait 10s before retry">
+      <bpmn:incoming>Flow_RetriesLeft</bpmn:incoming>
+      <bpmn:outgoing>Flow_WaitToMergeRequest</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerDef_WaitBeforeRetry">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT10S</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:serviceTask id="Task_FlagForAdmin" name="Flag payment for administrator">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="flag-payment-for-admin" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_NoRetriesLeft</bpmn:incoming>
+      <bpmn:outgoing>Flow_FlagToNotifyFailure</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_NotifyCustomerFailure" name="Notify customer payment could not be processed">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="notify-customer-payment-failure" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_FlagToNotifyFailure</bpmn:incoming>
+      <bpmn:outgoing>Flow_NotifyFailureToEnd</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_PaymentFailedFlagged" name="Payment failed – flagged">
+      <bpmn:incoming>Flow_NotifyFailureToEnd</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:serviceTask id="Task_SendConfirmation" name="Send order confirmation to customer">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="send-order-confirmation" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_PaymentSuccess</bpmn:incoming>
+      <bpmn:outgoing>Flow_ConfirmationToSubProcess</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:subProcess id="SubProcess_ProcessConfirmedOrder" name="Process confirmed order">
+      <bpmn:incoming>Flow_ConfirmationToSubProcess</bpmn:incoming>
+      <bpmn:outgoing>Flow_SubProcessToNotify</bpmn:outgoing>
+      <bpmn:startEvent id="Sub_Start" name="Payment confirmed">
+        <bpmn:outgoing>Flow_SubStartToStock</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:serviceTask id="Task_UpdateStock" name="Update stock">
+        <bpmn:extensionElements>
+          <zeebe:taskDefinition type="update-stock" />
+        </bpmn:extensionElements>
+        <bpmn:incoming>Flow_SubStartToStock</bpmn:incoming>
+        <bpmn:outgoing>Flow_StockToCommission</bpmn:outgoing>
+        <bpmn:dataOutputAssociation id="DataAssoc_UpdateStockToProducts">
+          <bpmn:targetRef>DataStore_Products</bpmn:targetRef>
+        </bpmn:dataOutputAssociation>
+      </bpmn:serviceTask>
+      <bpmn:dataStoreReference id="DataStore_Products" name="Products" />
+      <bpmn:serviceTask id="Task_CalculateCommission" name="Calculate producer amounts and 5% commission">
+        <bpmn:extensionElements>
+          <zeebe:taskDefinition type="calculate-commission" />
+        </bpmn:extensionElements>
+        <bpmn:incoming>Flow_StockToCommission</bpmn:incoming>
+        <bpmn:outgoing>Flow_CommissionToSubEnd</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:endEvent id="Sub_End" name="Order processed">
+        <bpmn:incoming>Flow_CommissionToSubEnd</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="Flow_SubStartToStock" sourceRef="Sub_Start" targetRef="Task_UpdateStock" />
+      <bpmn:sequenceFlow id="Flow_StockToCommission" sourceRef="Task_UpdateStock" targetRef="Task_CalculateCommission" />
+      <bpmn:sequenceFlow id="Flow_CommissionToSubEnd" sourceRef="Task_CalculateCommission" targetRef="Sub_End" />
+    </bpmn:subProcess>
+    <bpmn:serviceTask id="Task_NotifyProducers" name="Notify producer">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="notify-producer" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_SubProcessToNotify</bpmn:incoming>
+      <bpmn:outgoing>Flow_NotifyToEnd</bpmn:outgoing>
+      <bpmn:multiInstanceLoopCharacteristics>
+        <bpmn:extensionElements>
+          <zeebe:loopCharacteristics inputCollection="=producerOrders" inputElement="producerOrder" />
+        </bpmn:extensionElements>
+      </bpmn:multiInstanceLoopCharacteristics>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_ProducersNotified" name="Producers notified">
+      <bpmn:incoming>Flow_NotifyToEnd</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_StartToCreateOrder" sourceRef="Start_OrderReadyForPayment" targetRef="Task_CreateOrder" />
+    <bpmn:sequenceFlow id="Flow_CreateOrderToSplit" sourceRef="Task_CreateOrder" targetRef="Task_SplitOrder" />
+    <bpmn:sequenceFlow id="Flow_SplitToMergePayment" sourceRef="Task_SplitOrder" targetRef="Gateway_MergePayment" />
+    <bpmn:sequenceFlow id="Flow_MergeToEnterDetails" sourceRef="Gateway_MergePayment" targetRef="Task_EnterPaymentDetails" />
+    <bpmn:sequenceFlow id="Flow_EnterDetailsToMergeRequest" sourceRef="Task_EnterPaymentDetails" targetRef="Gateway_MergeRequest" />
+    <bpmn:sequenceFlow id="Flow_MergeToRequestPayment" sourceRef="Gateway_MergeRequest" targetRef="Task_RequestPayment" />
+    <bpmn:sequenceFlow id="Flow_RequestToResult" sourceRef="Task_RequestPayment" targetRef="Gateway_PaymentResult" />
+    <bpmn:sequenceFlow id="Flow_RetryOrCancelToGateway" sourceRef="Task_RetryOrCancel" targetRef="Gateway_RetryChoice" />
+    <bpmn:sequenceFlow id="Flow_ErrorToServiceDown" sourceRef="Boundary_PaymentServiceError" targetRef="Gateway_ServiceDown" />
+    <bpmn:sequenceFlow id="Flow_TimeoutToServiceDown" sourceRef="Boundary_PaymentTimeout" targetRef="Gateway_ServiceDown" />
+    <bpmn:sequenceFlow id="Flow_ServiceDownToIncrement" sourceRef="Gateway_ServiceDown" targetRef="Task_IncrementRetryCount" />
+    <bpmn:sequenceFlow id="Flow_IncrementToRetriesLeft" sourceRef="Task_IncrementRetryCount" targetRef="Gateway_RetriesLeft" />
+    <bpmn:sequenceFlow id="Flow_WaitToMergeRequest" sourceRef="Timer_WaitBeforeRetry" targetRef="Gateway_MergeRequest" />
+    <bpmn:sequenceFlow id="Flow_FlagToNotifyFailure" sourceRef="Task_FlagForAdmin" targetRef="Task_NotifyCustomerFailure" />
+    <bpmn:sequenceFlow id="Flow_NotifyFailureToEnd" sourceRef="Task_NotifyCustomerFailure" targetRef="End_PaymentFailedFlagged" />
+    <bpmn:sequenceFlow id="Flow_ConfirmationToSubProcess" sourceRef="Task_SendConfirmation" targetRef="SubProcess_ProcessConfirmedOrder" />
+    <bpmn:sequenceFlow id="Flow_SubProcessToNotify" sourceRef="SubProcess_ProcessConfirmedOrder" targetRef="Task_NotifyProducers" />
+    <bpmn:sequenceFlow id="Flow_NotifyToEnd" sourceRef="Task_NotifyProducers" targetRef="End_ProducersNotified" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_Main">
+    <bpmndi:BPMNPlane id="BPMNPlane_Main" bpmnElement="Collaboration_PaymentOrderProcessing">
+      <bpmndi:BPMNShape id="Participant_PaymentService_di" bpmnElement="Participant_PaymentService" isHorizontal="true">
+        <dc:Bounds x="60" y="30" width="1880" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Participant_Marketplace_di" bpmnElement="Participant_Marketplace" isHorizontal="true">
+        <dc:Bounds x="60" y="130" width="1880" height="700" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Customer_di" bpmnElement="Lane_Customer" isHorizontal="true">
+        <dc:Bounds x="90" y="130" width="1850" height="220" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Platform_di" bpmnElement="Lane_Platform" isHorizontal="true">
+        <dc:Bounds x="90" y="350" width="1850" height="480" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Participant_Producer_di" bpmnElement="Participant_Producer" isHorizontal="true">
+        <dc:Bounds x="60" y="870" width="1880" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Group_CalledByCheckout_di" bpmnElement="Group_CalledByCheckout">
+        <dc:Bounds x="132" y="384" width="88" height="110" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_OrderReadyForPayment_di" bpmnElement="Start_OrderReadyForPayment">
+        <dc:Bounds x="157" y="422" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_CreateOrder_di" bpmnElement="Task_CreateOrder">
+        <dc:Bounds x="220" y="400" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DataStore_Orders_di" bpmnElement="DataStore_Orders">
+        <dc:Bounds x="305" y="600" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_SplitOrder_di" bpmnElement="Task_SplitOrder">
+        <dc:Bounds x="380" y="400" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_MergePayment_di" bpmnElement="Gateway_MergePayment" isMarkerVisible="true">
+        <dc:Bounds x="535" y="215" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_EnterPaymentDetails_di" bpmnElement="Task_EnterPaymentDetails">
+        <dc:Bounds x="610" y="200" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_MergeRequest_di" bpmnElement="Gateway_MergeRequest" isMarkerVisible="true">
+        <dc:Bounds x="765" y="415" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_RequestPayment_di" bpmnElement="Task_RequestPayment">
+        <dc:Bounds x="850" y="400" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_PaymentResult_di" bpmnElement="Gateway_PaymentResult" isMarkerVisible="true">
+        <dc:Bounds x="1015" y="415" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_RetryOrCancel_di" bpmnElement="Task_RetryOrCancel">
+        <dc:Bounds x="980" y="200" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_RetryChoice_di" bpmnElement="Gateway_RetryChoice" isMarkerVisible="true">
+        <dc:Bounds x="1145" y="215" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_OrderCancelled_di" bpmnElement="End_OrderCancelled">
+        <dc:Bounds x="1292" y="222" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_SendConfirmation_di" bpmnElement="Task_SendConfirmation">
+        <dc:Bounds x="1150" y="400" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SubProcess_ProcessConfirmedOrder_di" bpmnElement="SubProcess_ProcessConfirmedOrder" isExpanded="false">
+        <dc:Bounds x="1330" y="400" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_NotifyProducers_di" bpmnElement="Task_NotifyProducers">
+        <dc:Bounds x="1510" y="400" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_ProducersNotified_di" bpmnElement="End_ProducersNotified">
+        <dc:Bounds x="1682" y="422" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_ServiceDown_di" bpmnElement="Gateway_ServiceDown" isMarkerVisible="true">
+        <dc:Bounds x="890" y="555" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_IncrementRetryCount_di" bpmnElement="Task_IncrementRetryCount">
+        <dc:Bounds x="980" y="650" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_RetriesLeft_di" bpmnElement="Gateway_RetriesLeft" isMarkerVisible="true">
+        <dc:Bounds x="1145" y="665" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Timer_WaitBeforeRetry_di" bpmnElement="Timer_WaitBeforeRetry">
+        <dc:Bounds x="1152" y="772" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_FlagForAdmin_di" bpmnElement="Task_FlagForAdmin">
+        <dc:Bounds x="1240" y="650" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_NotifyCustomerFailure_di" bpmnElement="Task_NotifyCustomerFailure">
+        <dc:Bounds x="1400" y="650" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_PaymentFailedFlagged_di" bpmnElement="End_PaymentFailedFlagged">
+        <dc:Bounds x="1442" y="762" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Boundary_PaymentServiceError_di" bpmnElement="Boundary_PaymentServiceError">
+        <dc:Bounds x="867" y="462" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Boundary_PaymentTimeout_di" bpmnElement="Boundary_PaymentTimeout">
+        <dc:Bounds x="927" y="462" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_StartToCreateOrder_di" bpmnElement="Flow_StartToCreateOrder"><di:waypoint x="193" y="440" /><di:waypoint x="220" y="440" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_CreateOrderToSplit_di" bpmnElement="Flow_CreateOrderToSplit"><di:waypoint x="340" y="440" /><di:waypoint x="380" y="440" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_SplitToMergePayment_di" bpmnElement="Flow_SplitToMergePayment"><di:waypoint x="500" y="440" /><di:waypoint x="520" y="440" /><di:waypoint x="520" y="240" /><di:waypoint x="535" y="240" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_MergeToEnterDetails_di" bpmnElement="Flow_MergeToEnterDetails"><di:waypoint x="585" y="240" /><di:waypoint x="610" y="240" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_EnterDetailsToMergeRequest_di" bpmnElement="Flow_EnterDetailsToMergeRequest"><di:waypoint x="670" y="280" /><di:waypoint x="670" y="440" /><di:waypoint x="765" y="440" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_MergeToRequestPayment_di" bpmnElement="Flow_MergeToRequestPayment"><di:waypoint x="815" y="440" /><di:waypoint x="850" y="440" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_RequestToResult_di" bpmnElement="Flow_RequestToResult"><di:waypoint x="970" y="440" /><di:waypoint x="1015" y="440" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_PaymentDeclined_di" bpmnElement="Flow_PaymentDeclined"><di:waypoint x="1040" y="415" /><di:waypoint x="1040" y="280" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_PaymentSuccess_di" bpmnElement="Flow_PaymentSuccess"><di:waypoint x="1065" y="440" /><di:waypoint x="1150" y="440" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_RetryOrCancelToGateway_di" bpmnElement="Flow_RetryOrCancelToGateway"><di:waypoint x="1100" y="240" /><di:waypoint x="1145" y="240" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Cancel_di" bpmnElement="Flow_Cancel"><di:waypoint x="1195" y="240" /><di:waypoint x="1292" y="240" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Retry_di" bpmnElement="Flow_Retry"><di:waypoint x="1170" y="215" /><di:waypoint x="1170" y="152" /><di:waypoint x="560" y="152" /><di:waypoint x="560" y="215" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ConfirmationToSubProcess_di" bpmnElement="Flow_ConfirmationToSubProcess"><di:waypoint x="1270" y="440" /><di:waypoint x="1330" y="440" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_SubProcessToNotify_di" bpmnElement="Flow_SubProcessToNotify"><di:waypoint x="1450" y="440" /><di:waypoint x="1510" y="440" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_NotifyToEnd_di" bpmnElement="Flow_NotifyToEnd"><di:waypoint x="1630" y="440" /><di:waypoint x="1682" y="440" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ErrorToServiceDown_di" bpmnElement="Flow_ErrorToServiceDown"><di:waypoint x="885" y="498" /><di:waypoint x="885" y="580" /><di:waypoint x="890" y="580" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_TimeoutToServiceDown_di" bpmnElement="Flow_TimeoutToServiceDown"><di:waypoint x="945" y="498" /><di:waypoint x="945" y="580" /><di:waypoint x="940" y="580" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ServiceDownToIncrement_di" bpmnElement="Flow_ServiceDownToIncrement"><di:waypoint x="915" y="605" /><di:waypoint x="915" y="690" /><di:waypoint x="980" y="690" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_IncrementToRetriesLeft_di" bpmnElement="Flow_IncrementToRetriesLeft"><di:waypoint x="1100" y="690" /><di:waypoint x="1145" y="690" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_NoRetriesLeft_di" bpmnElement="Flow_NoRetriesLeft"><di:waypoint x="1195" y="690" /><di:waypoint x="1240" y="690" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_RetriesLeft_di" bpmnElement="Flow_RetriesLeft"><di:waypoint x="1170" y="715" /><di:waypoint x="1170" y="772" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_WaitToMergeRequest_di" bpmnElement="Flow_WaitToMergeRequest"><di:waypoint x="1152" y="790" /><di:waypoint x="790" y="790" /><di:waypoint x="790" y="465" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_FlagToNotifyFailure_di" bpmnElement="Flow_FlagToNotifyFailure"><di:waypoint x="1360" y="690" /><di:waypoint x="1400" y="690" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_NotifyFailureToEnd_di" bpmnElement="Flow_NotifyFailureToEnd"><di:waypoint x="1460" y="730" /><di:waypoint x="1460" y="762" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DataAssoc_CreateOrderToOrders_di" bpmnElement="DataAssoc_CreateOrderToOrders"><di:waypoint x="330" y="480" /><di:waypoint x="330" y="600" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MessageFlow_PaymentRequest_di" bpmnElement="MessageFlow_PaymentRequest"><di:waypoint x="890" y="400" /><di:waypoint x="890" y="90" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MessageFlow_PaymentResponse_di" bpmnElement="MessageFlow_PaymentResponse"><di:waypoint x="930" y="90" /><di:waypoint x="930" y="400" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MessageFlow_ProducerNotification_di" bpmnElement="MessageFlow_ProducerNotification"><di:waypoint x="1590" y="480" /><di:waypoint x="1590" y="870" /></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_SubProcess">
+    <bpmndi:BPMNPlane id="BPMNPlane_SubProcess" bpmnElement="SubProcess_ProcessConfirmedOrder">
+      <bpmndi:BPMNShape id="Sub_Start_di" bpmnElement="Sub_Start">
+        <dc:Bounds x="162" y="142" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_UpdateStock_di" bpmnElement="Task_UpdateStock">
+        <dc:Bounds x="250" y="120" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DataStore_Products_di" bpmnElement="DataStore_Products">
+        <dc:Bounds x="285" y="260" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_CalculateCommission_di" bpmnElement="Task_CalculateCommission">
+        <dc:Bounds x="430" y="120" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Sub_End_di" bpmnElement="Sub_End">
+        <dc:Bounds x="612" y="142" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_SubStartToStock_di" bpmnElement="Flow_SubStartToStock"><di:waypoint x="198" y="160" /><di:waypoint x="250" y="160" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_StockToCommission_di" bpmnElement="Flow_StockToCommission"><di:waypoint x="370" y="160" /><di:waypoint x="430" y="160" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_CommissionToSubEnd_di" bpmnElement="Flow_CommissionToSubEnd"><di:waypoint x="550" y="160" /><di:waypoint x="612" y="160" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DataAssoc_UpdateStockToProducts_di" bpmnElement="DataAssoc_UpdateStockToProducts"><di:waypoint x="310" y="200" /><di:waypoint x="310" y="260" /></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

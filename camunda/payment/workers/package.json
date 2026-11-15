@@ -1,0 +1,14 @@
+{
+  "name": "payment-workers",
+  "version": "1.0.0",
+  "description": "Camunda job workers for Payment & Order Processing (US9, US10)",
+  "main": "worker.js",
+  "scripts": {
+    "start": "node worker.js",
+    "test": "node --test"
+  },
+  "type": "commonjs",
+  "dependencies": {
+    "@camunda8/sdk": "^8.8.20"
+  }
+}
