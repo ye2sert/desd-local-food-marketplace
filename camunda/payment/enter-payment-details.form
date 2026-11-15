@@ -1,0 +1,45 @@
+{
+  "components": [
+    {
+      "text": "# Pay for your order",
+      "type": "text",
+      "id": "Text_heading",
+      "layout": { "row": "Row_heading" }
+    },
+    {
+      "text": "=\"Order total: £\" + string(floor(orderTotal)) + \".\" + substring(string(100 + round half up(modulo(orderTotal * 100, 100), 0)), 2)",
+      "type": "text",
+      "id": "Text_orderTotal",
+      "layout": { "row": "Row_total" }
+    },
+    {
+      "label": "Payment method",
+      "type": "select",
+      "id": "Select_paymentMethod",
+      "key": "paymentMethod",
+      "values": [
+        { "label": "Visa", "value": "VISA" },
+        { "label": "Mastercard", "value": "MASTERCARD" },
+        { "label": "Apple Pay", "value": "APPLE_PAY" },
+        { "label": "Google Pay", "value": "GOOGLE_PAY" }
+      ],
+      "validate": { "required": true },
+      "layout": { "row": "Row_method" }
+    },
+    {
+      "label": "Payment token",
+      "type": "textfield",
+      "id": "Textfield_paymentToken",
+      "key": "paymentToken",
+      "defaultValue": "tok_visa_test",
+      "description": "Sandbox test token – never enter a real card number",
+      "validate": { "required": true },
+      "layout": { "row": "Row_token" }
+    }
+  ],
+  "type": "default",
+  "id": "enter-payment-details",
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.10.0",
+  "schemaVersion": 18
+}
