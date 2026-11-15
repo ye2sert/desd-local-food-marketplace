@@ -1,0 +1,1472 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_TeacherFeedback_UC2" targetNamespace="https://uwe.ac.uk/local-food-marketplace/uc2" exporter="Camunda Web Modeler" exporterVersion="64767e4" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.10.0">
+  <bpmn:documentation>Teacher feedback revision: clear order delivery/collection, payment decline with alternative payment method (not restart), explicit participant pools and responsibility lanes. Producer workflow kept as external black box; project focus Use Case 2.</bpmn:documentation>
+  <bpmn:collaboration id="Collaboration_UC2_TeacherFeedback" name="Sptint 2">
+    <bpmn:participant id="Pool_Customer" name="Customer" processRef="Proc_Customer" />
+    <bpmn:participant id="Pool_Gateway" name="Payment gateway (sandbox)" />
+    <bpmn:participant id="Pool_Market" name="Local Food Marketplace" processRef="Proc_Market" />
+    <bpmn:participant id="Pool_Producer" name="Local producers (external)" />
+    <bpmn:messageFlow id="MF_01" name="Basket" sourceRef="C_submit" targetRef="M_start" />
+    <bpmn:messageFlow id="MF_02" name="Revised basket" sourceRef="C_resubmit" targetRef="M_revised" />
+    <bpmn:messageFlow id="MF_03" name="Stock issue" sourceRef="M_shortage" targetRef="C_stockresult" />
+    <bpmn:messageFlow id="MF_04" name="Order / delivery options" sourceRef="M_summary" targetRef="C_stockresult" />
+    <bpmn:messageFlow id="MF_05" name="Confirm + delivery choice" sourceRef="C_confirm" targetRef="M_choice" />
+    <bpmn:messageFlow id="MF_06" name="Cancel" sourceRef="C_cancel" targetRef="M_choice" />
+    <bpmn:messageFlow id="MF_07" name="Payment details" sourceRef="C_pay" targetRef="M_paydetails" />
+    <bpmn:messageFlow id="MF_08" name="Payment request" sourceRef="M_charge" targetRef="Pool_Gateway" />
+    <bpmn:messageFlow id="MF_09" name="Approved / declined" sourceRef="Pool_Gateway" targetRef="M_gateway_result" />
+    <bpmn:messageFlow id="MF_10" name="Payment approved" sourceRef="M_paid_notice" targetRef="C_result" />
+    <bpmn:messageFlow id="MF_11" name="Payment declined" sourceRef="M_declined" targetRef="C_result" />
+    <bpmn:messageFlow id="MF_12" name="New payment method" sourceRef="C_newmethod" targetRef="M_retryrecv" />
+    <bpmn:messageFlow id="MF_13" name="Stop payment" sourceRef="C_stopPay" targetRef="M_retryrecv" />
+    <bpmn:messageFlow id="MF_14" name="Producer-specific order details" sourceRef="M_notify" targetRef="Pool_Producer" />
+    <bpmn:messageFlow id="MF_15" name="Ready for handover" sourceRef="Pool_Producer" targetRef="M_ready" />
+    <bpmn:messageFlow id="MF_16" name="Delivery / collection details" sourceRef="M_notify_customer" targetRef="C_fulfil_notice" />
+    <bpmn:messageFlow id="MF_17" name="Status pending" sourceRef="M_pending_notice" targetRef="C_result" />
+    <bpmn:messageFlow id="MF_18" name="Status enquiry" sourceRef="M_check_payment_status" targetRef="Pool_Gateway" />
+    <bpmn:messageFlow id="MF_19" name="Status response" sourceRef="Pool_Gateway" targetRef="M_check_payment_status" />
+  </bpmn:collaboration>
+  <bpmn:process id="Proc_Customer" name="Customer ordering journey" isExecutable="false">
+    <bpmn:startEvent id="C_start" name="Shop for local food">
+      <bpmn:outgoing>SF_C_start_C_browse</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="C_browse" name="Browse products">
+      <bpmn:incoming>SF_C_start_C_browse</bpmn:incoming>
+      <bpmn:outgoing>SF_C_browse_C_basket</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="C_basket" name="Add to basket">
+      <bpmn:incoming>SF_C_browse_C_basket</bpmn:incoming>
+      <bpmn:outgoing>SF_C_basket_C_submit</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="C_submit" name="Send basket">
+      <bpmn:incoming>SF_C_basket_C_submit</bpmn:incoming>
+      <bpmn:outgoing>SF_C_submit_C_stockresult</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Join_C_StockResult">
+      <bpmn:documentation>XOR merge: the customer can get a stock result after the initial basket or after editing and resubmitting it. These routes are alternative, not parallel.</bpmn:documentation>
+      <bpmn:incoming>SF_C_submit_C_stockresult</bpmn:incoming>
+      <bpmn:incoming>SF_C_resubmit_C_stockresult</bpmn:incoming>
+      <bpmn:outgoing>SF_Join_C_StockResult</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:intermediateCatchEvent id="C_stockresult" name="Stock result">
+      <bpmn:incoming>SF_Join_C_StockResult</bpmn:incoming>
+      <bpmn:outgoing>SF_C_stockresult_C_stockgw</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="C_stockresult_MessageEventDef" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:exclusiveGateway id="C_stockgw" name="Available?">
+      <bpmn:incoming>SF_C_stockresult_C_stockgw</bpmn:incoming>
+      <bpmn:outgoing>SF_C_stockgw_C_amend</bpmn:outgoing>
+      <bpmn:outgoing>SF_C_stockgw_C_method</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="C_amend" name="Edit basket">
+      <bpmn:incoming>SF_C_stockgw_C_amend</bpmn:incoming>
+      <bpmn:outgoing>SF_C_amend_C_resubmit</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="C_resubmit" name="Resubmit basket">
+      <bpmn:incoming>SF_C_amend_C_resubmit</bpmn:incoming>
+      <bpmn:outgoing>SF_C_resubmit_C_stockresult</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="C_method" name="Choose offered delivery or collection">
+      <bpmn:incoming>SF_C_stockgw_C_method</bpmn:incoming>
+      <bpmn:outgoing>SF_C_method_C_review</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="C_review" name="Review order">
+      <bpmn:incoming>SF_C_method_C_review</bpmn:incoming>
+      <bpmn:outgoing>SF_C_review_C_confirmgw</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="C_confirmgw" name="Confirm?">
+      <bpmn:incoming>SF_C_review_C_confirmgw</bpmn:incoming>
+      <bpmn:outgoing>SF_C_confirmgw_C_confirm</bpmn:outgoing>
+      <bpmn:outgoing>SF_C_confirmgw_C_cancel</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="C_confirm" name="Confirm order">
+      <bpmn:incoming>SF_C_confirmgw_C_confirm</bpmn:incoming>
+      <bpmn:outgoing>SF_C_confirm_C_pay</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="C_cancel" name="Cancel checkout">
+      <bpmn:incoming>SF_C_confirmgw_C_cancel</bpmn:incoming>
+      <bpmn:outgoing>SF_C_cancel_C_cancelEnd</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="C_cancelEnd" name="Checkout stopped">
+      <bpmn:incoming>SF_C_cancel_C_cancelEnd</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:exclusiveGateway id="Join_C_PayDetails">
+      <bpmn:documentation>XOR merge: reach payment entry after confirming checkout or after choosing a different payment method. Retains the basket and existing order.</bpmn:documentation>
+      <bpmn:incoming>SF_C_confirm_C_pay</bpmn:incoming>
+      <bpmn:incoming>SF_C_newmethod_C_pay</bpmn:incoming>
+      <bpmn:outgoing>SF_Join_C_PayDetails</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="C_pay" name="Enter payment details">
+      <bpmn:incoming>SF_Join_C_PayDetails</bpmn:incoming>
+      <bpmn:outgoing>SF_C_pay_C_result</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:intermediateCatchEvent id="C_result" name="Payment result">
+      <bpmn:incoming>SF_C_pay_C_result</bpmn:incoming>
+      <bpmn:outgoing>SF_C_result_C_paidgw</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="C_result_MessageEventDef" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:exclusiveGateway id="C_paidgw" name="Payment status?">
+      <bpmn:incoming>SF_C_result_C_paidgw</bpmn:incoming>
+      <bpmn:outgoing>SF_C_paidgw_C_fulfil_notice</bpmn:outgoing>
+      <bpmn:outgoing>SF_C_paidgw_C_retrygw</bpmn:outgoing>
+      <bpmn:outgoing>SF_C_paidgw_C_pending</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:intermediateCatchEvent id="C_fulfil_notice" name="Delivery / collection details">
+      <bpmn:incoming>SF_C_paidgw_C_fulfil_notice</bpmn:incoming>
+      <bpmn:outgoing>SF_C_fulfil_notice_C_receive</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="C_fulfil_notice_MessageEventDef" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:task id="C_receive" name="Receive or collect food">
+      <bpmn:incoming>SF_C_fulfil_notice_C_receive</bpmn:incoming>
+      <bpmn:outgoing>SF_C_receive_C_end</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="C_end" name="Order received">
+      <bpmn:incoming>SF_C_receive_C_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:exclusiveGateway id="C_retrygw" name="Try another method?">
+      <bpmn:incoming>SF_C_paidgw_C_retrygw</bpmn:incoming>
+      <bpmn:outgoing>SF_C_retrygw_C_newmethod</bpmn:outgoing>
+      <bpmn:outgoing>SF_C_retrygw_C_stopPay</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="C_newmethod" name="Use different payment method">
+      <bpmn:incoming>SF_C_retrygw_C_newmethod</bpmn:incoming>
+      <bpmn:outgoing>SF_C_newmethod_C_pay</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="C_stopPay" name="Stop payment">
+      <bpmn:incoming>SF_C_retrygw_C_stopPay</bpmn:incoming>
+      <bpmn:outgoing>SF_C_stopPay_C_noorder</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="C_noorder" name="No paid order">
+      <bpmn:incoming>SF_C_stopPay_C_noorder</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="SF_C_start_C_browse" sourceRef="C_start" targetRef="C_browse" />
+    <bpmn:sequenceFlow id="SF_C_browse_C_basket" sourceRef="C_browse" targetRef="C_basket" />
+    <bpmn:sequenceFlow id="SF_C_basket_C_submit" sourceRef="C_basket" targetRef="C_submit" />
+    <bpmn:sequenceFlow id="SF_Join_C_StockResult" sourceRef="Join_C_StockResult" targetRef="C_stockresult" />
+    <bpmn:sequenceFlow id="SF_C_submit_C_stockresult" sourceRef="C_submit" targetRef="Join_C_StockResult" />
+    <bpmn:sequenceFlow id="SF_C_stockresult_C_stockgw" sourceRef="C_stockresult" targetRef="C_stockgw" />
+    <bpmn:sequenceFlow id="SF_C_stockgw_C_amend" name="No" sourceRef="C_stockgw" targetRef="C_amend" />
+    <bpmn:sequenceFlow id="SF_C_amend_C_resubmit" sourceRef="C_amend" targetRef="C_resubmit" />
+    <bpmn:sequenceFlow id="SF_C_resubmit_C_stockresult" sourceRef="C_resubmit" targetRef="Join_C_StockResult" />
+    <bpmn:sequenceFlow id="SF_C_stockgw_C_method" name="Yes" sourceRef="C_stockgw" targetRef="C_method" />
+    <bpmn:sequenceFlow id="SF_C_method_C_review" sourceRef="C_method" targetRef="C_review" />
+    <bpmn:sequenceFlow id="SF_C_review_C_confirmgw" sourceRef="C_review" targetRef="C_confirmgw" />
+    <bpmn:sequenceFlow id="SF_C_confirmgw_C_confirm" name="Yes" sourceRef="C_confirmgw" targetRef="C_confirm" />
+    <bpmn:sequenceFlow id="SF_C_confirmgw_C_cancel" name="No" sourceRef="C_confirmgw" targetRef="C_cancel" />
+    <bpmn:sequenceFlow id="SF_C_cancel_C_cancelEnd" sourceRef="C_cancel" targetRef="C_cancelEnd" />
+    <bpmn:sequenceFlow id="SF_Join_C_PayDetails" sourceRef="Join_C_PayDetails" targetRef="C_pay" />
+    <bpmn:sequenceFlow id="SF_C_confirm_C_pay" sourceRef="C_confirm" targetRef="Join_C_PayDetails" />
+    <bpmn:sequenceFlow id="SF_C_pay_C_result" sourceRef="C_pay" targetRef="C_result" />
+    <bpmn:sequenceFlow id="SF_C_result_C_paidgw" sourceRef="C_result" targetRef="C_paidgw" />
+    <bpmn:sequenceFlow id="SF_C_paidgw_C_fulfil_notice" name="Yes" sourceRef="C_paidgw" targetRef="C_fulfil_notice" />
+    <bpmn:sequenceFlow id="SF_C_fulfil_notice_C_receive" sourceRef="C_fulfil_notice" targetRef="C_receive" />
+    <bpmn:sequenceFlow id="SF_C_receive_C_end" sourceRef="C_receive" targetRef="C_end" />
+    <bpmn:sequenceFlow id="SF_C_paidgw_C_retrygw" name="No" sourceRef="C_paidgw" targetRef="C_retrygw" />
+    <bpmn:sequenceFlow id="SF_C_retrygw_C_newmethod" name="Yes" sourceRef="C_retrygw" targetRef="C_newmethod" />
+    <bpmn:sequenceFlow id="SF_C_retrygw_C_stopPay" name="No" sourceRef="C_retrygw" targetRef="C_stopPay" />
+    <bpmn:sequenceFlow id="SF_C_newmethod_C_pay" sourceRef="C_newmethod" targetRef="Join_C_PayDetails" />
+    <bpmn:sequenceFlow id="SF_C_stopPay_C_noorder" sourceRef="C_stopPay" targetRef="C_noorder" />
+    <bpmn:task id="C_pending_status" name="Payment being checked">
+      <bpmn:documentation>An unknown payment outcome is not a decline. Customer is told the payment is pending verification and should not blindly pay again.</bpmn:documentation>
+      <bpmn:incoming>SF_C_paidgw_C_pending</bpmn:incoming>
+      <bpmn:outgoing>SF_C_pending_C_pending_end</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="C_pending_end" name="Wait for update">
+      <bpmn:documentation>A later update and reconciliation will be designed in the operational payment BPMN.</bpmn:documentation>
+      <bpmn:incoming>SF_C_pending_C_pending_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="SF_C_paidgw_C_pending" name="Pending" sourceRef="C_paidgw" targetRef="C_pending_status" />
+    <bpmn:sequenceFlow id="SF_C_pending_C_pending_end" sourceRef="C_pending_status" targetRef="C_pending_end" />
+  </bpmn:process>
+  <bpmn:process id="Proc_Market" name="Local marketplace ordering" isExecutable="false">
+    <bpmn:laneSet id="Market_Lanes">
+      <bpmn:lane id="Lane_Checkout" name="Checkout and stock">
+        <bpmn:flowNodeRef>M_start</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_validate</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_stockgw</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_shortage</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_revised</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_summary</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_choice</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_confirmgw</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_cancelEnd</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Join_M_Validate</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Payment" name="Orders and payment">
+        <bpmn:flowNodeRef>M_order</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_paydetails</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_charge</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_gateway_result</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_paygw</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_paid_notice</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_stock_comm</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_declined</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_retryrecv</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_retrygw</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_no_order</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_gateway_timeout</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_check_payment_status</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_status_outcome</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_pending_notice</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_pending_end</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Join_M_PayDetails</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Join_M_Paid</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Join_M_Declined</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Delivery" name="Delivery and collection">
+        <bpmn:flowNodeRef>M_notify</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_ready</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_delivergw</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_delivery</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_collect</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_join</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_notify_customer</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_end</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="M_start" name="Basket received">
+      <bpmn:outgoing>SF_M_start_M_validate</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="M_start_MessageEventDef" />
+    </bpmn:startEvent>
+    <bpmn:exclusiveGateway id="Join_M_Validate">
+      <bpmn:documentation>XOR merge: first-time basket checking or a revised basket recheck. Do not synchronize these mutually exclusive paths.</bpmn:documentation>
+      <bpmn:incoming>SF_M_start_M_validate</bpmn:incoming>
+      <bpmn:incoming>SF_M_revised_M_validate</bpmn:incoming>
+      <bpmn:outgoing>SF_Join_M_Validate</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="M_validate" name="F1: Validate basket and stock">
+      <bpmn:incoming>SF_Join_M_Validate</bpmn:incoming>
+      <bpmn:outgoing>SF_M_validate_M_stockgw</bpmn:outgoing>
+      <bpmn:property id="Prop_StockInput" name="stockRecords" />
+      <bpmn:dataInputAssociation id="Assoc_ReadStock">
+        <bpmn:sourceRef>D_Stock</bpmn:sourceRef>
+        <bpmn:targetRef>Prop_StockInput</bpmn:targetRef>
+      </bpmn:dataInputAssociation>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="M_stockgw" name="In stock?">
+      <bpmn:incoming>SF_M_validate_M_stockgw</bpmn:incoming>
+      <bpmn:outgoing>SF_M_stockgw_M_shortage</bpmn:outgoing>
+      <bpmn:outgoing>SF_M_stockgw_M_summary</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="M_shortage" name="Request basket changes">
+      <bpmn:incoming>SF_M_stockgw_M_shortage</bpmn:incoming>
+      <bpmn:outgoing>SF_M_shortage_M_revised</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:receiveTask id="M_revised" name="Receive revised basket">
+      <bpmn:incoming>SF_M_shortage_M_revised</bpmn:incoming>
+      <bpmn:outgoing>SF_M_revised_M_validate</bpmn:outgoing>
+    </bpmn:receiveTask>
+    <bpmn:subProcess id="M_summary" name="Identify producers &#38; delivery options">
+      <bpmn:documentation>Use Case 2, paragraph 3: after confirming available quantities, the marketplace identifies all producers involved in the basket and determines the applicable delivery or collection arrangements. The order summary and available options are provided for customer review before confirmation. This subprocess is supporting detail within F1 checkout, not another use case.</bpmn:documentation>
+      <bpmn:incoming>SF_M_stockgw_M_summary</bpmn:incoming>
+      <bpmn:outgoing>SF_M_summary_M_choice</bpmn:outgoing>
+      <bpmn:startEvent id="Step02_Available" name="Stock available">
+        <bpmn:outgoing>SF_Step02_Available_to_Step02_Producers</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:task id="Step02_Producers" name="Identify producers involved">
+        <bpmn:incoming>SF_Step02_Available_to_Step02_Producers</bpmn:incoming>
+        <bpmn:outgoing>SF_Step02_Producers_to_Step02_Arrangements</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:task id="Step02_Arrangements" name="Determine delivery or collection arrangements">
+        <bpmn:incoming>SF_Step02_Producers_to_Step02_Arrangements</bpmn:incoming>
+        <bpmn:outgoing>SF_Step02_Arrangements_to_Step02_Summary</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:task id="Step02_Summary" name="Prepare order summary and available options">
+        <bpmn:incoming>SF_Step02_Arrangements_to_Step02_Summary</bpmn:incoming>
+        <bpmn:outgoing>SF_Step02_Summary_to_Step02_OptionsReady</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:endEvent id="Step02_OptionsReady" name="Options ready for customer">
+        <bpmn:incoming>SF_Step02_Summary_to_Step02_OptionsReady</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="SF_Step02_Available_to_Step02_Producers" sourceRef="Step02_Available" targetRef="Step02_Producers" />
+      <bpmn:sequenceFlow id="SF_Step02_Producers_to_Step02_Arrangements" sourceRef="Step02_Producers" targetRef="Step02_Arrangements" />
+      <bpmn:sequenceFlow id="SF_Step02_Arrangements_to_Step02_Summary" sourceRef="Step02_Arrangements" targetRef="Step02_Summary" />
+      <bpmn:sequenceFlow id="SF_Step02_Summary_to_Step02_OptionsReady" sourceRef="Step02_Summary" targetRef="Step02_OptionsReady" />
+    </bpmn:subProcess>
+    <bpmn:receiveTask id="M_choice" name="Receive customer decision">
+      <bpmn:incoming>SF_M_summary_M_choice</bpmn:incoming>
+      <bpmn:outgoing>SF_M_choice_M_confirmgw</bpmn:outgoing>
+    </bpmn:receiveTask>
+    <bpmn:exclusiveGateway id="M_confirmgw" name="Confirmed?">
+      <bpmn:incoming>SF_M_choice_M_confirmgw</bpmn:incoming>
+      <bpmn:outgoing>SF_M_confirmgw_M_cancelEnd</bpmn:outgoing>
+      <bpmn:outgoing>SF_M_confirmgw_M_order</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="M_cancelEnd" name="Checkout cancelled">
+      <bpmn:incoming>SF_M_confirmgw_M_cancelEnd</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:task id="M_order" name="F2: Create and split order">
+      <bpmn:documentation>Use Case 2: create ONE overall marketplace order, then separate it into producer-specific order elements BEFORE charging the sandbox payment service.</bpmn:documentation>
+      <bpmn:incoming>SF_M_confirmgw_M_order</bpmn:incoming>
+      <bpmn:outgoing>SF_M_order_M_paydetails</bpmn:outgoing>
+      <bpmn:dataOutputAssociation id="Assoc_SaveOrder">
+        <bpmn:targetRef>D_Orders</bpmn:targetRef>
+      </bpmn:dataOutputAssociation>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Join_M_PayDetails">
+      <bpmn:documentation>XOR merge: accept details for the first payment attempt or for an expressly requested retry. Neither route requires restarting basket checkout.</bpmn:documentation>
+      <bpmn:incoming>SF_M_order_M_paydetails</bpmn:incoming>
+      <bpmn:incoming>SF_M_retrygw_M_paydetails</bpmn:incoming>
+      <bpmn:outgoing>SF_Join_M_PayDetails</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:receiveTask id="M_paydetails" name="Receive payment details">
+      <bpmn:incoming>SF_Join_M_PayDetails</bpmn:incoming>
+      <bpmn:outgoing>SF_M_paydetails_M_charge</bpmn:outgoing>
+    </bpmn:receiveTask>
+    <bpmn:task id="M_charge" name="Send payment request">
+      <bpmn:incoming>SF_M_paydetails_M_charge</bpmn:incoming>
+      <bpmn:outgoing>SF_M_charge_M_gateway_result</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:receiveTask id="M_gateway_result" name="Receive gateway result">
+      <bpmn:incoming>SF_M_charge_M_gateway_result</bpmn:incoming>
+      <bpmn:outgoing>SF_M_gateway_result_M_paygw</bpmn:outgoing>
+    </bpmn:receiveTask>
+    <bpmn:exclusiveGateway id="M_paygw" name="Approved?">
+      <bpmn:incoming>SF_M_gateway_result_M_paygw</bpmn:incoming>
+      <bpmn:outgoing>SF_M_paygw_M_paid_notice</bpmn:outgoing>
+      <bpmn:outgoing>SF_M_paygw_M_declined</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:exclusiveGateway id="Join_M_Paid">
+      <bpmn:documentation>XOR merge: a payment can be confirmed from a normal successful gateway result or after safely checking the status of a timed-out request.</bpmn:documentation>
+      <bpmn:incoming>SF_M_paygw_M_paid_notice</bpmn:incoming>
+      <bpmn:incoming>SF_M_statusgw_M_paid</bpmn:incoming>
+      <bpmn:outgoing>SF_Join_M_Paid</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="M_paid_notice" name="Confirm successful payment">
+      <bpmn:incoming>SF_Join_M_Paid</bpmn:incoming>
+      <bpmn:outgoing>SF_M_paid_notice_M_stock_comm</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:subProcess id="M_stock_comm" name="Update stock; calculate producer amounts &#38; 5% commission">
+      <bpmn:documentation>Official Use Case 2: only AFTER successful payment, update inventory quantities; calculate the amount attributable to each producer in the multi-vendor order and the marketplace 5% commission. Producer notifications follow this subprocess. Whether and how commission is deducted from individual producer payouts is not specified here; do not assume a settlement rule without group agreement.</bpmn:documentation>
+      <bpmn:incoming>SF_M_paid_notice_M_stock_comm</bpmn:incoming>
+      <bpmn:outgoing>SF_M_stock_comm_M_notify</bpmn:outgoing>
+      <bpmn:startEvent id="FinStart" name="Payment successful">
+        <bpmn:outgoing>SF_UC2_FinStart_FinStock</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:task id="FinStock" name="Update purchased stock quantities">
+        <bpmn:incoming>SF_UC2_FinStart_FinStock</bpmn:incoming>
+        <bpmn:outgoing>SF_UC2_FinStock_FinShares</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:task id="FinShares" name="Calculate amount attributable to each producer">
+        <bpmn:incoming>SF_UC2_FinStock_FinShares</bpmn:incoming>
+        <bpmn:outgoing>SF_UC2_FinShares_FinFee</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:task id="FinFee" name="Calculate marketplace 5% commission">
+        <bpmn:incoming>SF_UC2_FinShares_FinFee</bpmn:incoming>
+        <bpmn:outgoing>SF_UC2_FinFee_FinRecord</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:task id="FinRecord" name="Record producer amounts and commission">
+        <bpmn:incoming>SF_UC2_FinFee_FinRecord</bpmn:incoming>
+        <bpmn:outgoing>SF_UC2_FinRecord_FinEnd</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:endEvent id="FinEnd" name="Stock and amounts recorded">
+        <bpmn:incoming>SF_UC2_FinRecord_FinEnd</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="SF_UC2_FinStart_FinStock" sourceRef="FinStart" targetRef="FinStock" />
+      <bpmn:sequenceFlow id="SF_UC2_FinStock_FinShares" sourceRef="FinStock" targetRef="FinShares" />
+      <bpmn:sequenceFlow id="SF_UC2_FinShares_FinFee" sourceRef="FinShares" targetRef="FinFee" />
+      <bpmn:sequenceFlow id="SF_UC2_FinFee_FinRecord" sourceRef="FinFee" targetRef="FinRecord" />
+      <bpmn:sequenceFlow id="SF_UC2_FinRecord_FinEnd" sourceRef="FinRecord" targetRef="FinEnd" />
+    </bpmn:subProcess>
+    <bpmn:exclusiveGateway id="Join_M_Declined">
+      <bpmn:documentation>XOR merge: a definite decline can be received directly or discovered from the payment-status check. Both require offering retry/cancel to the customer.</bpmn:documentation>
+      <bpmn:incoming>SF_M_paygw_M_declined</bpmn:incoming>
+      <bpmn:incoming>SF_M_statusgw_M_declined</bpmn:incoming>
+      <bpmn:outgoing>SF_Join_M_Declined</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="M_declined" name="Tell customer payment declined">
+      <bpmn:incoming>SF_Join_M_Declined</bpmn:incoming>
+      <bpmn:outgoing>SF_M_declined_M_retryrecv</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:receiveTask id="M_retryrecv" name="Receive retry or cancel choice">
+      <bpmn:incoming>SF_M_declined_M_retryrecv</bpmn:incoming>
+      <bpmn:outgoing>SF_M_retryrecv_M_retrygw</bpmn:outgoing>
+    </bpmn:receiveTask>
+    <bpmn:exclusiveGateway id="M_retrygw" name="Retry?">
+      <bpmn:incoming>SF_M_retryrecv_M_retrygw</bpmn:incoming>
+      <bpmn:outgoing>SF_M_retrygw_M_no_order</bpmn:outgoing>
+      <bpmn:outgoing>SF_M_retrygw_M_paydetails</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="M_no_order" name="Unpaid order closed">
+      <bpmn:incoming>SF_M_retrygw_M_no_order</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:task id="M_notify" name="Notify each relevant producer">
+      <bpmn:incoming>SF_M_stock_comm_M_notify</bpmn:incoming>
+      <bpmn:outgoing>SF_M_notify_M_ready</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:receiveTask id="M_ready" name="Receive producer-ready updates">
+      <bpmn:incoming>SF_M_notify_M_ready</bpmn:incoming>
+      <bpmn:outgoing>SF_M_ready_M_delivergw</bpmn:outgoing>
+    </bpmn:receiveTask>
+    <bpmn:exclusiveGateway id="M_delivergw" name="Chosen handover method?">
+      <bpmn:documentation>Use the delivery or collection arrangement that was determined during checkout and selected by the customer before confirmation. No regional, cost, timing or producer lead-time rule is supplied by Use Case 2.</bpmn:documentation>
+      <bpmn:incoming>SF_M_ready_M_delivergw</bpmn:incoming>
+      <bpmn:outgoing>SF_M_delivergw_M_delivery</bpmn:outgoing>
+      <bpmn:outgoing>SF_M_delivergw_M_collect</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="M_delivery" name="Arrange delivery">
+      <bpmn:incoming>SF_M_delivergw_M_delivery</bpmn:incoming>
+      <bpmn:outgoing>SF_M_delivery_M_join</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="M_collect" name="Arrange collection">
+      <bpmn:incoming>SF_M_delivergw_M_collect</bpmn:incoming>
+      <bpmn:outgoing>SF_M_collect_M_join</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="M_join" name="">
+      <bpmn:incoming>SF_M_delivery_M_join</bpmn:incoming>
+      <bpmn:incoming>SF_M_collect_M_join</bpmn:incoming>
+      <bpmn:outgoing>SF_M_join_M_notify_customer</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="M_notify_customer" name="Send handover details">
+      <bpmn:incoming>SF_M_join_M_notify_customer</bpmn:incoming>
+      <bpmn:outgoing>SF_M_notify_customer_M_end</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="M_end" name="Handover arranged">
+      <bpmn:incoming>SF_M_notify_customer_M_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="SF_Join_M_Validate" sourceRef="Join_M_Validate" targetRef="M_validate" />
+    <bpmn:sequenceFlow id="SF_M_start_M_validate" sourceRef="M_start" targetRef="Join_M_Validate" />
+    <bpmn:sequenceFlow id="SF_M_validate_M_stockgw" sourceRef="M_validate" targetRef="M_stockgw" />
+    <bpmn:sequenceFlow id="SF_M_stockgw_M_shortage" name="No" sourceRef="M_stockgw" targetRef="M_shortage" />
+    <bpmn:sequenceFlow id="SF_M_shortage_M_revised" sourceRef="M_shortage" targetRef="M_revised" />
+    <bpmn:sequenceFlow id="SF_M_revised_M_validate" sourceRef="M_revised" targetRef="Join_M_Validate" />
+    <bpmn:sequenceFlow id="SF_M_stockgw_M_summary" name="Yes" sourceRef="M_stockgw" targetRef="M_summary" />
+    <bpmn:sequenceFlow id="SF_M_summary_M_choice" sourceRef="M_summary" targetRef="M_choice" />
+    <bpmn:sequenceFlow id="SF_M_choice_M_confirmgw" sourceRef="M_choice" targetRef="M_confirmgw" />
+    <bpmn:sequenceFlow id="SF_M_confirmgw_M_cancelEnd" name="No" sourceRef="M_confirmgw" targetRef="M_cancelEnd" />
+    <bpmn:sequenceFlow id="SF_M_confirmgw_M_order" name="Yes" sourceRef="M_confirmgw" targetRef="M_order" />
+    <bpmn:sequenceFlow id="SF_Join_M_PayDetails" sourceRef="Join_M_PayDetails" targetRef="M_paydetails" />
+    <bpmn:sequenceFlow id="SF_M_order_M_paydetails" sourceRef="M_order" targetRef="Join_M_PayDetails" />
+    <bpmn:sequenceFlow id="SF_M_paydetails_M_charge" sourceRef="M_paydetails" targetRef="M_charge" />
+    <bpmn:sequenceFlow id="SF_M_charge_M_gateway_result" sourceRef="M_charge" targetRef="M_gateway_result" />
+    <bpmn:sequenceFlow id="SF_M_gateway_result_M_paygw" sourceRef="M_gateway_result" targetRef="M_paygw" />
+    <bpmn:sequenceFlow id="SF_Join_M_Paid" sourceRef="Join_M_Paid" targetRef="M_paid_notice" />
+    <bpmn:sequenceFlow id="SF_M_paygw_M_paid_notice" name="Yes" sourceRef="M_paygw" targetRef="Join_M_Paid" />
+    <bpmn:sequenceFlow id="SF_M_paid_notice_M_stock_comm" sourceRef="M_paid_notice" targetRef="M_stock_comm" />
+    <bpmn:sequenceFlow id="SF_Join_M_Declined" sourceRef="Join_M_Declined" targetRef="M_declined" />
+    <bpmn:sequenceFlow id="SF_M_paygw_M_declined" name="No" sourceRef="M_paygw" targetRef="Join_M_Declined" />
+    <bpmn:sequenceFlow id="SF_M_declined_M_retryrecv" sourceRef="M_declined" targetRef="M_retryrecv" />
+    <bpmn:sequenceFlow id="SF_M_retryrecv_M_retrygw" sourceRef="M_retryrecv" targetRef="M_retrygw" />
+    <bpmn:sequenceFlow id="SF_M_retrygw_M_no_order" name="No" sourceRef="M_retrygw" targetRef="M_no_order" />
+    <bpmn:sequenceFlow id="SF_M_retrygw_M_paydetails" name="Yes" sourceRef="M_retrygw" targetRef="Join_M_PayDetails" />
+    <bpmn:sequenceFlow id="SF_M_stock_comm_M_notify" sourceRef="M_stock_comm" targetRef="M_notify" />
+    <bpmn:sequenceFlow id="SF_M_notify_M_ready" sourceRef="M_notify" targetRef="M_ready" />
+    <bpmn:sequenceFlow id="SF_M_ready_M_delivergw" sourceRef="M_ready" targetRef="M_delivergw" />
+    <bpmn:sequenceFlow id="SF_M_delivergw_M_delivery" name="Delivery" sourceRef="M_delivergw" targetRef="M_delivery" />
+    <bpmn:sequenceFlow id="SF_M_delivergw_M_collect" name="Collection" sourceRef="M_delivergw" targetRef="M_collect" />
+    <bpmn:sequenceFlow id="SF_M_delivery_M_join" sourceRef="M_delivery" targetRef="M_join" />
+    <bpmn:sequenceFlow id="SF_M_collect_M_join" sourceRef="M_collect" targetRef="M_join" />
+    <bpmn:sequenceFlow id="SF_M_join_M_notify_customer" sourceRef="M_join" targetRef="M_notify_customer" />
+    <bpmn:sequenceFlow id="SF_M_notify_customer_M_end" sourceRef="M_notify_customer" targetRef="M_end" />
+    <bpmn:dataStoreReference id="D_Stock" name="Stock levels" dataStoreRef="DS_ProductStock" />
+    <bpmn:dataStoreReference id="D_Orders" name="Order records" dataStoreRef="DS_Order" />
+    <bpmn:boundaryEvent id="M_gateway_timeout" name="No gateway reply" attachedToRef="M_gateway_result">
+      <bpmn:documentation>UC2 requires an alternative path if the sandbox gateway is temporarily unavailable. The timeout length is NOT given in the use case. paymentResponseTimeout is a proposed duration process variable to be agreed and configured by the group in an operational model, not a working runtime value in this strategic draft.</bpmn:documentation>
+      <bpmn:outgoing>SF_M_timeout_M_check</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="M_gateway_timeout_TimerDef">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">=paymentResponseTimeout</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:task id="M_check_payment_status" name="Check payment status">
+      <bpmn:documentation>After missing gateway reply, enquire using the EXISTING order/payment reference instead of recharging. A status enquiry must not create another payment.</bpmn:documentation>
+      <bpmn:incoming>SF_M_timeout_M_check</bpmn:incoming>
+      <bpmn:outgoing>SF_M_check_M_statusgw</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="M_status_outcome" name="Payment status?">
+      <bpmn:documentation>Status check may find an approved transaction, a declined transaction, or an unresolved/unknown transaction. In execution, each conditional path requires reliable process data.</bpmn:documentation>
+      <bpmn:incoming>SF_M_check_M_statusgw</bpmn:incoming>
+      <bpmn:outgoing>SF_M_statusgw_M_paid</bpmn:outgoing>
+      <bpmn:outgoing>SF_M_statusgw_M_declined</bpmn:outgoing>
+      <bpmn:outgoing>SF_M_statusgw_M_pending</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="M_pending_notice" name="Tell customer status is pending">
+      <bpmn:documentation>Inform the customer that payment could not be confirmed. Do not decrement stock, send producer orders, or incorrectly claim nothing was charged. Investigate/reconcile this pending transaction.</bpmn:documentation>
+      <bpmn:incoming>SF_M_statusgw_M_pending</bpmn:incoming>
+      <bpmn:outgoing>SF_M_pending_M_pending_end</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="M_pending_end" name="Payment pending reconciliation">
+      <bpmn:documentation>This conceptual endpoint is an unresolved payment requiring later reconciliation. It is NOT a declined payment or a completed purchase. The operational F2 model must specify the actual safe follow-up mechanism and its trigger.</bpmn:documentation>
+      <bpmn:incoming>SF_M_pending_M_pending_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="SF_M_timeout_M_check" sourceRef="M_gateway_timeout" targetRef="M_check_payment_status" />
+    <bpmn:sequenceFlow id="SF_M_check_M_statusgw" sourceRef="M_check_payment_status" targetRef="M_status_outcome" />
+    <bpmn:sequenceFlow id="SF_M_statusgw_M_paid" name="Approved" sourceRef="M_status_outcome" targetRef="Join_M_Paid" />
+    <bpmn:sequenceFlow id="SF_M_statusgw_M_declined" name="Declined" sourceRef="M_status_outcome" targetRef="Join_M_Declined" />
+    <bpmn:sequenceFlow id="SF_M_statusgw_M_pending" name="Unknown" sourceRef="M_status_outcome" targetRef="M_pending_notice" />
+    <bpmn:sequenceFlow id="SF_M_pending_M_pending_end" sourceRef="M_pending_notice" targetRef="M_pending_end" />
+    <bpmn:textAnnotation id="Note_Scope">
+      <bpmn:text>SCOPE: Use Case 2 only.
+Producer onboarding, listings and food-safety processes
+are supporting enterprise context, not modelled here.</bpmn:text>
+    </bpmn:textAnnotation>
+  </bpmn:process>
+  <bpmn:dataStore id="DS_ProductStock" name="Product and stock records" />
+  <bpmn:dataStore id="DS_Order" name="Order and producer records" />
+  <bpmndi:BPMNDiagram id="BPMNDiagram_TeacherFeedback">
+    <bpmndi:BPMNPlane id="BPMNPlane_TeacherFeedback" bpmnElement="Collaboration_UC2_TeacherFeedback">
+      <bpmndi:BPMNShape id="Pool_Customer_di" bpmnElement="Pool_Customer" isHorizontal="true">
+        <dc:Bounds x="135" y="52" width="3370" height="310" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C_start_di" bpmnElement="C_start">
+        <dc:Bounds x="205" y="155" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="153" y="196" width="140" height="30" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C_browse_di" bpmnElement="C_browse">
+        <dc:Bounds x="283" y="134" width="126" height="78" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C_basket_di" bpmnElement="C_basket">
+        <dc:Bounds x="448" y="134" width="126" height="78" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C_submit_di" bpmnElement="C_submit">
+        <dc:Bounds x="613" y="134" width="126" height="78" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Join_C_StockResult_di" bpmnElement="Join_C_StockResult" isMarkerVisible="true">
+        <dc:Bounds x="766" y="221" width="44" height="44" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C_stockresult_di" bpmnElement="C_stockresult">
+        <dc:Bounds x="773" y="155" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="748" y="208" width="95" height="25" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C_stockgw_di" bpmnElement="C_stockgw" isMarkerVisible="true">
+        <dc:Bounds x="858" y="148" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="833" y="121" width="100" height="30" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C_amend_di" bpmnElement="C_amend">
+        <dc:Bounds x="830" y="246" width="132" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C_resubmit_di" bpmnElement="C_resubmit">
+        <dc:Bounds x="1010" y="246" width="140" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C_method_di" bpmnElement="C_method">
+        <dc:Bounds x="983" y="134" width="155" height="78" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C_review_di" bpmnElement="C_review">
+        <dc:Bounds x="1171" y="134" width="135" height="78" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C_confirmgw_di" bpmnElement="C_confirmgw" isMarkerVisible="true">
+        <dc:Bounds x="1340" y="148" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1315" y="121" width="100" height="30" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C_confirm_di" bpmnElement="C_confirm">
+        <dc:Bounds x="1435" y="134" width="132" height="78" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C_cancel_di" bpmnElement="C_cancel">
+        <dc:Bounds x="1335" y="246" width="138" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C_cancelEnd_di" bpmnElement="C_cancelEnd">
+        <dc:Bounds x="1532" y="260" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1480" y="301" width="140" height="30" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Join_C_PayDetails_di" bpmnElement="Join_C_PayDetails" isMarkerVisible="true">
+        <dc:Bounds x="1668" y="228" width="46" height="46" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C_pay_di" bpmnElement="C_pay">
+        <dc:Bounds x="1617" y="134" width="148" height="78" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C_result_di" bpmnElement="C_result">
+        <dc:Bounds x="1803" y="155" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1751" y="196" width="140" height="30" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C_paidgw_di" bpmnElement="C_paidgw" isMarkerVisible="true">
+        <dc:Bounds x="1885" y="148" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1940" y="117" width="130" height="22" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C_fulfil_notice_di" bpmnElement="C_fulfil_notice">
+        <dc:Bounds x="2035" y="155" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1983" y="196" width="140" height="30" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C_receive_di" bpmnElement="C_receive">
+        <dc:Bounds x="2122" y="134" width="154" height="78" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C_end_di" bpmnElement="C_end">
+        <dc:Bounds x="2315" y="155" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2263" y="196" width="140" height="30" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C_retrygw_di" bpmnElement="C_retrygw" isMarkerVisible="true">
+        <dc:Bounds x="1885" y="250" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1860" y="223" width="100" height="30" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C_newmethod_di" bpmnElement="C_newmethod">
+        <dc:Bounds x="2010" y="246" width="165" height="78" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C_stopPay_di" bpmnElement="C_stopPay">
+        <dc:Bounds x="2230" y="256" width="132" height="68" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C_noorder_di" bpmnElement="C_noorder">
+        <dc:Bounds x="2420" y="270" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2368" y="311" width="140" height="30" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C_pending_status_di" bpmnElement="C_pending_status">
+        <dc:Bounds x="2640" y="246" width="180" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C_pending_end_di" bpmnElement="C_pending_end">
+        <dc:Bounds x="2892" y="263" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2880" y="305" width="116" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="SF_C_start_C_browse_di" bpmnElement="SF_C_start_C_browse">
+        <di:waypoint x="241" y="173" />
+        <di:waypoint x="283" y="173" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_C_browse_C_basket_di" bpmnElement="SF_C_browse_C_basket">
+        <di:waypoint x="409" y="173" />
+        <di:waypoint x="448" y="173" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_C_basket_C_submit_di" bpmnElement="SF_C_basket_C_submit">
+        <di:waypoint x="574" y="173" />
+        <di:waypoint x="613" y="173" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_Join_C_StockResult_di" bpmnElement="SF_Join_C_StockResult">
+        <di:waypoint x="788" y="221" />
+        <di:waypoint x="788" y="209" />
+        <di:waypoint x="791" y="209" />
+        <di:waypoint x="791" y="191" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_C_submit_C_stockresult_di" bpmnElement="SF_C_submit_C_stockresult">
+        <di:waypoint x="739" y="173" />
+        <di:waypoint x="750" y="173" />
+        <di:waypoint x="750" y="243" />
+        <di:waypoint x="766" y="243" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_C_stockresult_C_stockgw_di" bpmnElement="SF_C_stockresult_C_stockgw">
+        <di:waypoint x="809" y="173" />
+        <di:waypoint x="858" y="173" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_C_stockgw_C_amend_di" bpmnElement="SF_C_stockgw_C_amend">
+        <di:waypoint x="883" y="198" />
+        <di:waypoint x="883" y="225" />
+        <di:waypoint x="883" y="246" />
+        <di:waypoint x="896" y="246" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="853" y="184.5" width="65" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_C_amend_C_resubmit_di" bpmnElement="SF_C_amend_C_resubmit">
+        <di:waypoint x="962" y="281" />
+        <di:waypoint x="1010" y="281" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_C_resubmit_C_stockresult_di" bpmnElement="SF_C_resubmit_C_stockresult">
+        <di:waypoint x="1150" y="281" />
+        <di:waypoint x="1160" y="340" />
+        <di:waypoint x="788" y="340" />
+        <di:waypoint x="788" y="265" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_C_stockgw_C_method_di" bpmnElement="SF_C_stockgw_C_method">
+        <di:waypoint x="908" y="173" />
+        <di:waypoint x="983" y="173" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="915.5" y="146" width="65" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_C_method_C_review_di" bpmnElement="SF_C_method_C_review">
+        <di:waypoint x="1138" y="173" />
+        <di:waypoint x="1171" y="173" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_C_review_C_confirmgw_di" bpmnElement="SF_C_review_C_confirmgw">
+        <di:waypoint x="1306" y="173" />
+        <di:waypoint x="1340" y="173" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_C_confirmgw_C_confirm_di" bpmnElement="SF_C_confirmgw_C_confirm">
+        <di:waypoint x="1390" y="173" />
+        <di:waypoint x="1435" y="173" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1382.5" y="146" width="65" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_C_confirmgw_C_cancel_di" bpmnElement="SF_C_confirmgw_C_cancel">
+        <di:waypoint x="1365" y="198" />
+        <di:waypoint x="1365" y="233" />
+        <di:waypoint x="1404" y="246" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1335" y="188.5" width="65" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_C_cancel_C_cancelEnd_di" bpmnElement="SF_C_cancel_C_cancelEnd">
+        <di:waypoint x="1473" y="281" />
+        <di:waypoint x="1532" y="278" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_Join_C_PayDetails_di" bpmnElement="SF_Join_C_PayDetails">
+        <di:waypoint x="1691" y="228" />
+        <di:waypoint x="1691" y="212" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_C_confirm_C_pay_di" bpmnElement="SF_C_confirm_C_pay">
+        <di:waypoint x="1567" y="173" />
+        <di:waypoint x="1595" y="173" />
+        <di:waypoint x="1595" y="251" />
+        <di:waypoint x="1668" y="251" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_C_pay_C_result_di" bpmnElement="SF_C_pay_C_result">
+        <di:waypoint x="1765" y="173" />
+        <di:waypoint x="1803" y="173" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_C_result_C_paidgw_di" bpmnElement="SF_C_result_C_paidgw">
+        <di:waypoint x="1839" y="173" />
+        <di:waypoint x="1885" y="173" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_C_paidgw_C_fulfil_notice_di" bpmnElement="SF_C_paidgw_C_fulfil_notice">
+        <di:waypoint x="1935" y="173" />
+        <di:waypoint x="2035" y="173" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1955" y="146" width="65" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_C_fulfil_notice_C_receive_di" bpmnElement="SF_C_fulfil_notice_C_receive">
+        <di:waypoint x="2071" y="173" />
+        <di:waypoint x="2122" y="173" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_C_receive_C_end_di" bpmnElement="SF_C_receive_C_end">
+        <di:waypoint x="2276" y="173" />
+        <di:waypoint x="2315" y="173" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_C_paidgw_C_retrygw_di" bpmnElement="SF_C_paidgw_C_retrygw">
+        <di:waypoint x="1910" y="198" />
+        <di:waypoint x="1910" y="250" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1880" y="197" width="65" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_C_retrygw_C_newmethod_di" bpmnElement="SF_C_retrygw_C_newmethod">
+        <di:waypoint x="1935" y="275" />
+        <di:waypoint x="2010" y="285" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1942.5" y="253" width="65" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_C_retrygw_C_stopPay_di" bpmnElement="SF_C_retrygw_C_stopPay">
+        <di:waypoint x="1910" y="300" />
+        <di:waypoint x="1910" y="352" />
+        <di:waypoint x="2296" y="352" />
+        <di:waypoint x="2296" y="324" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1880" y="294.5" width="65" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_C_newmethod_C_result_di" bpmnElement="SF_C_newmethod_C_pay">
+        <di:waypoint x="2010" y="285" />
+        <di:waypoint x="1980" y="285" />
+        <di:waypoint x="1980" y="334" />
+        <di:waypoint x="1691" y="334" />
+        <di:waypoint x="1691" y="274" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_C_stopPay_C_noorder_di" bpmnElement="SF_C_stopPay_C_noorder">
+        <di:waypoint x="2362" y="290" />
+        <di:waypoint x="2420" y="288" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_C_paidgw_C_pending_di" bpmnElement="SF_C_paidgw_C_pending">
+        <di:waypoint x="1910" y="148" />
+        <di:waypoint x="1910" y="107" />
+        <di:waypoint x="2730" y="107" />
+        <di:waypoint x="2730" y="246" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2390" y="85" width="88" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_C_pending_C_pending_end_di" bpmnElement="SF_C_pending_C_pending_end">
+        <di:waypoint x="2820" y="281" />
+        <di:waypoint x="2892" y="281" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Pool_Gateway_di" bpmnElement="Pool_Gateway" isHorizontal="true">
+        <dc:Bounds x="1510" y="465" width="450" height="68" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Pool_Market_di" bpmnElement="Pool_Market" isHorizontal="true">
+        <dc:Bounds x="135" y="560" width="3370" height="850" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Delivery_di" bpmnElement="Lane_Delivery" isHorizontal="true">
+        <dc:Bounds x="167" y="1130" width="3338" height="280" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Payment_di" bpmnElement="Lane_Payment" isHorizontal="true">
+        <dc:Bounds x="167" y="852" width="3338" height="278" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Checkout_di" bpmnElement="Lane_Checkout" isHorizontal="true">
+        <dc:Bounds x="167" y="560" width="3338" height="292" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_start_di" bpmnElement="M_start">
+        <dc:Bounds x="226" y="660" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="190" y="707" width="108" height="25" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Join_M_Validate_di" bpmnElement="Join_M_Validate" isMarkerVisible="true">
+        <dc:Bounds x="276" y="654" width="48" height="48" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_validate_di" bpmnElement="M_validate">
+        <dc:Bounds x="330" y="638" width="185" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_stockgw_di" bpmnElement="M_stockgw" isMarkerVisible="true">
+        <dc:Bounds x="568" y="651" width="54" height="54" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="540" y="622" width="115" height="24" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_shortage_di" bpmnElement="M_shortage">
+        <dc:Bounds x="585" y="751" width="166" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_revised_di" bpmnElement="M_revised">
+        <dc:Bounds x="800" y="751" width="170" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_summary_di" bpmnElement="M_summary" isExpanded="false">
+        <dc:Bounds x="704" y="638" width="180" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_choice_di" bpmnElement="M_choice">
+        <dc:Bounds x="937" y="638" width="180" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_confirmgw_di" bpmnElement="M_confirmgw" isMarkerVisible="true">
+        <dc:Bounds x="1169" y="651" width="54" height="54" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1138" y="622" width="125" height="24" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_cancelEnd_di" bpmnElement="M_cancelEnd">
+        <dc:Bounds x="1345" y="660" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1293" y="707" width="140" height="25" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_order_di" bpmnElement="M_order">
+        <dc:Bounds x="1155" y="904" width="180" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Join_M_PayDetails_di" bpmnElement="Join_M_PayDetails" isMarkerVisible="true">
+        <dc:Bounds x="1342" y="921" width="46" height="46" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_paydetails_di" bpmnElement="M_paydetails">
+        <dc:Bounds x="1395" y="904" width="185" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_charge_di" bpmnElement="M_charge">
+        <dc:Bounds x="1635" y="904" width="175" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_gateway_result_di" bpmnElement="M_gateway_result">
+        <dc:Bounds x="1858" y="904" width="178" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_paygw_di" bpmnElement="M_paygw" isMarkerVisible="true">
+        <dc:Bounds x="2075" y="916" width="54" height="54" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2045" y="883" width="112" height="24" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Join_M_Paid_di" bpmnElement="Join_M_Paid" isMarkerVisible="true">
+        <dc:Bounds x="2220" y="855" width="44" height="44" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_paid_notice_di" bpmnElement="M_paid_notice">
+        <dc:Bounds x="2165" y="904" width="190" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_stock_comm_di" bpmnElement="M_stock_comm" isExpanded="false">
+        <dc:Bounds x="2405" y="904" width="268" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Join_M_Declined_di" bpmnElement="Join_M_Declined" isMarkerVisible="true">
+        <dc:Bounds x="1960" y="996" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_declined_di" bpmnElement="M_declined">
+        <dc:Bounds x="2030" y="1022" width="198" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_retryrecv_di" bpmnElement="M_retryrecv">
+        <dc:Bounds x="2273" y="1022" width="200" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_retrygw_di" bpmnElement="M_retrygw" isMarkerVisible="true">
+        <dc:Bounds x="2525" y="1034" width="54" height="54" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2500" y="1000" width="112" height="24" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_no_order_di" bpmnElement="M_no_order">
+        <dc:Bounds x="2692" y="1044" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2640" y="1090" width="140" height="25" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_notify_di" bpmnElement="M_notify">
+        <dc:Bounds x="2140" y="1210" width="174" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_ready_di" bpmnElement="M_ready">
+        <dc:Bounds x="2350" y="1210" width="182" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_delivergw_di" bpmnElement="M_delivergw" isMarkerVisible="true">
+        <dc:Bounds x="2570" y="1223" width="54" height="54" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2540" y="1191" width="120" height="24" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_delivery_di" bpmnElement="M_delivery">
+        <dc:Bounds x="2670" y="1158" width="158" height="74" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_collect_di" bpmnElement="M_collect">
+        <dc:Bounds x="2670" y="1280" width="158" height="74" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_join_di" bpmnElement="M_join" isMarkerVisible="true">
+        <dc:Bounds x="2870" y="1223" width="54" height="54" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_notify_customer_di" bpmnElement="M_notify_customer">
+        <dc:Bounds x="2960" y="1210" width="175" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_end_di" bpmnElement="M_end">
+        <dc:Bounds x="3200" y="1232" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3148" y="1275" width="140" height="25" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="D_Stock_di" bpmnElement="D_Stock">
+        <dc:Bounds x="382" y="756" width="48" height="48" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="D_Orders_di" bpmnElement="D_Orders">
+        <dc:Bounds x="1233" y="1031" width="48" height="48" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_check_payment_status_di" bpmnElement="M_check_payment_status">
+        <dc:Bounds x="2850" y="912" width="185" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_status_outcome_di" bpmnElement="M_status_outcome" isMarkerVisible="true">
+        <dc:Bounds x="3100" y="924" width="54" height="54" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3085" y="884" width="122" height="23" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_pending_notice_di" bpmnElement="M_pending_notice">
+        <dc:Bounds x="3200" y="1018" width="190" height="76" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_pending_end_di" bpmnElement="M_pending_end">
+        <dc:Bounds x="3430" y="1038" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3350" y="1083" width="150" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Note_Scope_di" bpmnElement="Note_Scope">
+        <dc:Bounds x="155" y="1445" width="1150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_gateway_timeout_di" bpmnElement="M_gateway_timeout">
+        <dc:Bounds x="1980" y="886" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1980" y="852" width="120" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="SF_Join_M_Validate_di" bpmnElement="SF_Join_M_Validate">
+        <di:waypoint x="324" y="678" />
+        <di:waypoint x="330" y="678" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_M_start_M_validate_di" bpmnElement="SF_M_start_M_validate">
+        <di:waypoint x="262" y="678" />
+        <di:waypoint x="276" y="678" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_M_validate_M_stockgw_di" bpmnElement="SF_M_validate_M_stockgw">
+        <di:waypoint x="515" y="678" />
+        <di:waypoint x="568" y="678" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_M_stockgw_M_shortage_di" bpmnElement="SF_M_stockgw_M_shortage">
+        <di:waypoint x="595" y="705" />
+        <di:waypoint x="668" y="751" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="601.5" y="701" width="65" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_M_shortage_M_revised_di" bpmnElement="SF_M_shortage_M_revised">
+        <di:waypoint x="751" y="787" />
+        <di:waypoint x="800" y="787" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_M_revised_M_validate_di" bpmnElement="SF_M_revised_M_validate">
+        <di:waypoint x="885" y="823" />
+        <di:waypoint x="885" y="842" />
+        <di:waypoint x="300" y="842" />
+        <di:waypoint x="300" y="702" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_M_stockgw_M_summary_di" bpmnElement="SF_M_stockgw_M_summary">
+        <di:waypoint x="622" y="678" />
+        <di:waypoint x="704" y="678" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="633" y="651" width="65" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_M_summary_M_choice_di" bpmnElement="SF_M_summary_M_choice">
+        <di:waypoint x="884" y="678" />
+        <di:waypoint x="937" y="678" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_M_choice_M_confirmgw_di" bpmnElement="SF_M_choice_M_confirmgw">
+        <di:waypoint x="1117" y="678" />
+        <di:waypoint x="1169" y="678" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_M_confirmgw_M_cancelEnd_di" bpmnElement="SF_M_confirmgw_M_cancelEnd">
+        <di:waypoint x="1223" y="678" />
+        <di:waypoint x="1250" y="675" />
+        <di:waypoint x="1345" y="678" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1206.5" y="649.5" width="65" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_M_confirmgw_M_order_di" bpmnElement="SF_M_confirmgw_M_order">
+        <di:waypoint x="1196" y="705" />
+        <di:waypoint x="1196" y="780" />
+        <di:waypoint x="1245" y="780" />
+        <di:waypoint x="1245" y="904" />
+        <di:waypoint x="1245" y="904" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1166" y="715.5" width="65" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_Join_M_PayDetails_di" bpmnElement="SF_Join_M_PayDetails">
+        <di:waypoint x="1388" y="944" />
+        <di:waypoint x="1395" y="944" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_M_order_M_paydetails_di" bpmnElement="SF_M_order_M_paydetails">
+        <di:waypoint x="1335" y="944" />
+        <di:waypoint x="1342" y="944" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_M_paydetails_M_charge_di" bpmnElement="SF_M_paydetails_M_charge">
+        <di:waypoint x="1580" y="944" />
+        <di:waypoint x="1635" y="944" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_M_charge_M_gateway_result_di" bpmnElement="SF_M_charge_M_gateway_result">
+        <di:waypoint x="1810" y="944" />
+        <di:waypoint x="1858" y="944" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_M_gateway_result_M_paygw_di" bpmnElement="SF_M_gateway_result_M_paygw">
+        <di:waypoint x="2036" y="944" />
+        <di:waypoint x="2075" y="943" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_Join_M_Paid_di" bpmnElement="SF_Join_M_Paid">
+        <di:waypoint x="2242" y="899" />
+        <di:waypoint x="2242" y="904" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_M_paygw_M_paid_notice_di" bpmnElement="SF_M_paygw_M_paid_notice">
+        <di:waypoint x="2129" y="943" />
+        <di:waypoint x="2140" y="943" />
+        <di:waypoint x="2140" y="877" />
+        <di:waypoint x="2220" y="877" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2117" y="916.5" width="65" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_M_paid_notice_M_stock_comm_di" bpmnElement="SF_M_paid_notice_M_stock_comm">
+        <di:waypoint x="2355" y="944" />
+        <di:waypoint x="2405" y="944" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_Join_M_Declined_di" bpmnElement="SF_Join_M_Declined">
+        <di:waypoint x="2010" y="1021" />
+        <di:waypoint x="2020" y="1021" />
+        <di:waypoint x="2020" y="1058" />
+        <di:waypoint x="2030" y="1058" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_M_paygw_M_declined_di" bpmnElement="SF_M_paygw_M_declined">
+        <di:waypoint x="2102" y="970" />
+        <di:waypoint x="2102" y="990" />
+        <di:waypoint x="1985" y="990" />
+        <di:waypoint x="1985" y="996" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2085.5" y="969" width="65" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_M_declined_M_retryrecv_di" bpmnElement="SF_M_declined_M_retryrecv">
+        <di:waypoint x="2228" y="1058" />
+        <di:waypoint x="2273" y="1058" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_M_retryrecv_M_retrygw_di" bpmnElement="SF_M_retryrecv_M_retrygw">
+        <di:waypoint x="2473" y="1058" />
+        <di:waypoint x="2525" y="1061" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_M_retrygw_M_no_order_di" bpmnElement="SF_M_retrygw_M_no_order">
+        <di:waypoint x="2579" y="1061" />
+        <di:waypoint x="2692" y="1062" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2605.5" y="1034.5" width="65" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_M_retrygw_M_charge_di" bpmnElement="SF_M_retrygw_M_paydetails">
+        <di:waypoint x="2552" y="1088" />
+        <di:waypoint x="2552" y="1112" />
+        <di:waypoint x="1365" y="1112" />
+        <di:waypoint x="1365" y="967" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2522" y="1069.5" width="65" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_M_stock_comm_M_notify_di" bpmnElement="SF_M_stock_comm_M_notify">
+        <di:waypoint x="2500" y="984" />
+        <di:waypoint x="2500" y="994" />
+        <di:waypoint x="2500" y="1162" />
+        <di:waypoint x="2227" y="1162" />
+        <di:waypoint x="2227" y="1210" />
+        <di:waypoint x="2227" y="1210" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_M_notify_M_ready_di" bpmnElement="SF_M_notify_M_ready">
+        <di:waypoint x="2314" y="1250" />
+        <di:waypoint x="2350" y="1250" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_M_ready_M_delivergw_di" bpmnElement="SF_M_ready_M_delivergw">
+        <di:waypoint x="2532" y="1250" />
+        <di:waypoint x="2570" y="1250" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_M_delivergw_M_delivery_di" bpmnElement="SF_M_delivergw_M_delivery">
+        <di:waypoint x="2597" y="1223" />
+        <di:waypoint x="2597" y="1175" />
+        <di:waypoint x="2670" y="1175" />
+        <di:waypoint x="2670" y="1195" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2567" y="1172" width="65" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_M_delivergw_M_collect_di" bpmnElement="SF_M_delivergw_M_collect">
+        <di:waypoint x="2597" y="1277" />
+        <di:waypoint x="2597" y="1318" />
+        <di:waypoint x="2670" y="1318" />
+        <di:waypoint x="2670" y="1317" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2567" y="1270.5" width="65" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_M_delivery_M_join_di" bpmnElement="SF_M_delivery_M_join">
+        <di:waypoint x="2828" y="1195" />
+        <di:waypoint x="2848" y="1196" />
+        <di:waypoint x="2897" y="1196" />
+        <di:waypoint x="2897" y="1223" />
+        <di:waypoint x="2897" y="1223" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_M_collect_M_join_di" bpmnElement="SF_M_collect_M_join">
+        <di:waypoint x="2828" y="1317" />
+        <di:waypoint x="2848" y="1318" />
+        <di:waypoint x="2897" y="1318" />
+        <di:waypoint x="2897" y="1277" />
+        <di:waypoint x="2897" y="1277" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_M_join_M_notify_customer_di" bpmnElement="SF_M_join_M_notify_customer">
+        <di:waypoint x="2924" y="1250" />
+        <di:waypoint x="2960" y="1250" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_M_notify_customer_M_end_di" bpmnElement="SF_M_notify_customer_M_end">
+        <di:waypoint x="3135" y="1250" />
+        <di:waypoint x="3200" y="1250" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_M_timeout_M_check_di" bpmnElement="SF_M_timeout_M_check">
+        <di:waypoint x="1998" y="886" />
+        <di:waypoint x="1998" y="836" />
+        <di:waypoint x="2940" y="836" />
+        <di:waypoint x="2940" y="912" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_M_check_M_statusgw_di" bpmnElement="SF_M_check_M_statusgw">
+        <di:waypoint x="3035" y="948" />
+        <di:waypoint x="3100" y="948" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_M_statusgw_M_paid_di" bpmnElement="SF_M_statusgw_M_paid">
+        <di:waypoint x="3127" y="924" />
+        <di:waypoint x="3127" y="871" />
+        <di:waypoint x="2264" y="871" />
+        <di:waypoint x="2264" y="877" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2950" y="880" width="80" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_M_statusgw_M_declined_di" bpmnElement="SF_M_statusgw_M_declined">
+        <di:waypoint x="3127" y="978" />
+        <di:waypoint x="3127" y="1112" />
+        <di:waypoint x="1985" y="1112" />
+        <di:waypoint x="1985" y="1046" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2910" y="993" width="82" height="19" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_M_statusgw_M_pending_di" bpmnElement="SF_M_statusgw_M_pending">
+        <di:waypoint x="3154" y="951" />
+        <di:waypoint x="3290" y="951" />
+        <di:waypoint x="3290" y="1018" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3157" y="932" width="83" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_M_pending_M_pending_end_di" bpmnElement="SF_M_pending_M_pending_end">
+        <di:waypoint x="3390" y="1056" />
+        <di:waypoint x="3430" y="1056" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Pool_Producer_di" bpmnElement="Pool_Producer" isHorizontal="true">
+        <dc:Bounds x="2140" y="1460" width="550" height="85" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Assoc_ReadStock_di" bpmnElement="Assoc_ReadStock">
+        <di:waypoint x="406" y="756" />
+        <di:waypoint x="406" y="718" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Assoc_SaveOrder_di" bpmnElement="Assoc_SaveOrder">
+        <di:waypoint x="1245" y="984" />
+        <di:waypoint x="1257" y="1031" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_01_di" bpmnElement="MF_01">
+        <di:waypoint x="676" y="212" />
+        <di:waypoint x="676" y="515" />
+        <di:waypoint x="244" y="515" />
+        <di:waypoint x="244" y="660" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="450" y="487" width="100" height="22" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_02_di" bpmnElement="MF_02">
+        <di:waypoint x="1080" y="316" />
+        <di:waypoint x="1080" y="535" />
+        <di:waypoint x="885" y="535" />
+        <di:waypoint x="885" y="751" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="888" y="512" width="120" height="22" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_03_di" bpmnElement="MF_03">
+        <di:waypoint x="668" y="751" />
+        <di:waypoint x="668" y="490" />
+        <di:waypoint x="745" y="490" />
+        <di:waypoint x="745" y="209" />
+        <di:waypoint x="779" y="190" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="677" y="463" width="92" height="22" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_04_di" bpmnElement="MF_04">
+        <di:waypoint x="794" y="638" />
+        <di:waypoint x="794" y="510" />
+        <di:waypoint x="819" y="510" />
+        <di:waypoint x="819" y="208" />
+        <di:waypoint x="804" y="190" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="807" y="493" width="130" height="22" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_05_di" bpmnElement="MF_05">
+        <di:waypoint x="1480" y="212" />
+        <di:waypoint x="1480" y="540" />
+        <di:waypoint x="1027" y="540" />
+        <di:waypoint x="1027" y="638" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1250" y="519" width="192" height="23" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_06_di" bpmnElement="MF_06">
+        <di:waypoint x="1404" y="316" />
+        <di:waypoint x="1404" y="490" />
+        <di:waypoint x="1090" y="490" />
+        <di:waypoint x="1090" y="638" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1248" y="470" width="70" height="22" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_07_di" bpmnElement="MF_07">
+        <di:waypoint x="1765" y="192" />
+        <di:waypoint x="1781" y="192" />
+        <di:waypoint x="1781" y="445" />
+        <di:waypoint x="1490" y="445" />
+        <di:waypoint x="1490" y="904" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1542" y="418" width="105" height="22" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_08_di" bpmnElement="MF_08">
+        <di:waypoint x="1723" y="904" />
+        <di:waypoint x="1723" y="533" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1735" y="622" width="125" height="22" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_09_di" bpmnElement="MF_09">
+        <di:waypoint x="1947" y="533" />
+        <di:waypoint x="1947" y="904" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1958" y="620" width="148" height="22" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_10_di" bpmnElement="MF_10">
+        <di:waypoint x="2300" y="904" />
+        <di:waypoint x="2300" y="405" />
+        <di:waypoint x="1790" y="405" />
+        <di:waypoint x="1790" y="173" />
+        <di:waypoint x="1803" y="173" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1940" y="384" width="144" height="22" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_11_di" bpmnElement="MF_11">
+        <di:waypoint x="2130" y="1022" />
+        <di:waypoint x="2130" y="427" />
+        <di:waypoint x="1850" y="427" />
+        <di:waypoint x="1850" y="173" />
+        <di:waypoint x="1839" y="173" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1940" y="428" width="142" height="22" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_12_di" bpmnElement="MF_12">
+        <di:waypoint x="2092" y="324" />
+        <di:waypoint x="2092" y="495" />
+        <di:waypoint x="2366" y="495" />
+        <di:waypoint x="2366" y="1022" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2180" y="475" width="140" height="22" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_13_di" bpmnElement="MF_13">
+        <di:waypoint x="2296" y="324" />
+        <di:waypoint x="2296" y="353" />
+        <di:waypoint x="2393" y="353" />
+        <di:waypoint x="2393" y="1022" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2288" y="370" width="110" height="22" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_14_di" bpmnElement="MF_14">
+        <di:waypoint x="2227" y="1290" />
+        <di:waypoint x="2227" y="1460" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2240" y="1363" width="110" height="22" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_15_di" bpmnElement="MF_15">
+        <di:waypoint x="2490" y="1460" />
+        <di:waypoint x="2490" y="1380" />
+        <di:waypoint x="2441" y="1380" />
+        <di:waypoint x="2441" y="1290" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2500" y="1337" width="132" height="22" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_16_di" bpmnElement="MF_16">
+        <di:waypoint x="3047" y="1210" />
+        <di:waypoint x="3047" y="440" />
+        <di:waypoint x="2475" y="440" />
+        <di:waypoint x="2475" y="100" />
+        <di:waypoint x="2053" y="100" />
+        <di:waypoint x="2053" y="155" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2590" y="418" width="188" height="22" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_17_di" bpmnElement="MF_17">
+        <di:waypoint x="3290" y="1018" />
+        <di:waypoint x="3290" y="386" />
+        <di:waypoint x="1821" y="386" />
+        <di:waypoint x="1821" y="191" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2750" y="369" width="115" height="22" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_18_di" bpmnElement="MF_18">
+        <di:waypoint x="2894" y="912" />
+        <di:waypoint x="2894" y="445" />
+        <di:waypoint x="2003" y="445" />
+        <di:waypoint x="2003" y="484" />
+        <di:waypoint x="1960" y="484" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2440" y="422" width="110" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_19_di" bpmnElement="MF_19">
+        <di:waypoint x="1960" y="508" />
+        <di:waypoint x="1975" y="508" />
+        <di:waypoint x="1975" y="427" />
+        <di:waypoint x="2940" y="427" />
+        <di:waypoint x="2940" y="912" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2440" y="405" width="120" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_Step02_ProducersDelivery">
+    <bpmndi:BPMNPlane id="BPMNPlane_Step02_ProducersDelivery" bpmnElement="M_summary">
+      <bpmndi:BPMNShape id="Step02_Available_di" bpmnElement="Step02_Available">
+        <dc:Bounds x="100" y="180" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="75" y="227" width="110" height="34" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Step02_Producers_di" bpmnElement="Step02_Producers">
+        <dc:Bounds x="210" y="158" width="190" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Step02_Arrangements_di" bpmnElement="Step02_Arrangements">
+        <dc:Bounds x="475" y="158" width="215" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Step02_Summary_di" bpmnElement="Step02_Summary">
+        <dc:Bounds x="765" y="158" width="205" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Step02_OptionsReady_di" bpmnElement="Step02_OptionsReady">
+        <dc:Bounds x="1040" y="180" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1015" y="227" width="110" height="34" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="SF_Step02_Available_to_Step02_Producers_di" bpmnElement="SF_Step02_Available_to_Step02_Producers">
+        <di:waypoint x="136" y="198" />
+        <di:waypoint x="210" y="198" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_Step02_Producers_to_Step02_Arrangements_di" bpmnElement="SF_Step02_Producers_to_Step02_Arrangements">
+        <di:waypoint x="400" y="198" />
+        <di:waypoint x="475" y="198" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_Step02_Arrangements_to_Step02_Summary_di" bpmnElement="SF_Step02_Arrangements_to_Step02_Summary">
+        <di:waypoint x="690" y="198" />
+        <di:waypoint x="765" y="198" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_Step02_Summary_to_Step02_OptionsReady_di" bpmnElement="SF_Step02_Summary_to_Step02_OptionsReady">
+        <di:waypoint x="970" y="198" />
+        <di:waypoint x="1040" y="198" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_UC2_FinancialAllocation">
+    <bpmndi:BPMNPlane id="BPMNPlane_UC2_FinancialAllocation" bpmnElement="M_stock_comm">
+      <bpmndi:BPMNShape id="FinStart_di" bpmnElement="FinStart">
+        <dc:Bounds x="100" y="170" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="70" y="230" width="110" height="35" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="FinStock_di" bpmnElement="FinStock">
+        <dc:Bounds x="205" y="148" width="190" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="FinShares_di" bpmnElement="FinShares">
+        <dc:Bounds x="455" y="148" width="220" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="FinFee_di" bpmnElement="FinFee">
+        <dc:Bounds x="735" y="148" width="215" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="FinRecord_di" bpmnElement="FinRecord">
+        <dc:Bounds x="1010" y="148" width="220" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="FinEnd_di" bpmnElement="FinEnd">
+        <dc:Bounds x="1295" y="170" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1265" y="230" width="110" height="35" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="SF_UC2_FinStart_FinStock_di" bpmnElement="SF_UC2_FinStart_FinStock">
+        <di:waypoint x="136" y="188" />
+        <di:waypoint x="205" y="188" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_UC2_FinStock_FinShares_di" bpmnElement="SF_UC2_FinStock_FinShares">
+        <di:waypoint x="395" y="188" />
+        <di:waypoint x="455" y="188" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_UC2_FinShares_FinFee_di" bpmnElement="SF_UC2_FinShares_FinFee">
+        <di:waypoint x="675" y="188" />
+        <di:waypoint x="735" y="188" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_UC2_FinFee_FinRecord_di" bpmnElement="SF_UC2_FinFee_FinRecord">
+        <di:waypoint x="950" y="188" />
+        <di:waypoint x="1010" y="188" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_UC2_FinRecord_FinEnd_di" bpmnElement="SF_UC2_FinRecord_FinEnd">
+        <di:waypoint x="1230" y="188" />
+        <di:waypoint x="1295" y="188" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
