@@ -29,7 +29,7 @@ One order (basket `BASKET-1042`, customer `CUST-207`, 5 items from 3 producers, 
 ## Notes
 
 - In Sprint 2 the two processes are not yet linked. Payment was started by hand in the Modeler using the variables copied from the finished checkout instance. Linking them is planned for Sprint 3.
-- The stock worker was run with the `allInStock` output and PRD-202 in stock, matching the change Tahmid is committing to `camunda/stock-service/worker.js`.
-- Only the main (successful) path was run. Declined payment, payment service unavailable and insufficient stock are modelled and will be automated in Sprint 3.
+- The stock worker was run with the `allInStock` output and PRD-202 in stock. Tahmid has since committed this fix to `main` and moved the stock data to `camunda/shared/stock.json`.
+- This run followed the main (successful) path only. Exception paths were tested separately: insufficient stock in [`../checkout/`](../checkout/) (Yunus) and payment service unavailable in [`../payment/`](../payment/) (Mackenzie). The declined-payment path is planned for Sprint 3.
 
 *AI was used in an assistive role in writing this document. It was reviewed by our team and changes were made.*
