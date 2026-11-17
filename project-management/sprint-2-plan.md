@@ -12,7 +12,7 @@ Complete the i* SD and SR models, build detailed operational BPMN models for che
 |---|---|---|
 | i* Strategic Dependency and Strategic Rationale models | 30% | PW1, PW2 |
 | Operational BPMN models (incl. alternative and exception paths) | 35% | PW3, PW4 |
-| Initial Camunda automation (Forms, user tasks, service tasks, variables, gateways, business logic) | 25% | PW5, PW6 (part), US1, US2, US5, US6, US9, US10 |
+| Initial Camunda automation (Forms, user tasks, service tasks, variables, gateways, business logic) | 25% | PW5, PW6a, PW6b, US1, US2, US5, US6, US9, US10 |
 | Sprint progress, traceability and version control | 10% | T14, T15, T17, Jira, commits |
 
  
@@ -80,13 +80,22 @@ To rebalance, PW7 (3 points) is planned to move from Hamza to Rohan at Sprint 3 
 - Commit messages include the Jira key (e.g. SCRUM-21).
 - Another member has reviewed it (pull request or group meeting).
 - The item is moved to Done in Jira.
+  
 ## Risks
  
 | Risk | Action | Status |
 |---|---|---|
-| Camunda setup problems delay the whole team | Rohan starts PW5 in week 1 and adds setup steps to the README | Open |
-| Checkout and payment processes overlap | Yunus and Mackenzie agree the handover point before modelling | Open |
+| Camunda setup problems delay the whole team | Rohan starts PW5 in week 1 and adds setup steps to the README | Closed |
+| Checkout and payment processes overlap | Yunus and Mackenzie agree the handover point before modelling | Closed |
 | i* and BPMN models must be created by the group (AI-generated models are not allowed) | All models drawn by their owners and reviewed by the group | Open |
 | GitHub not yet linked to Jira | Rohan and ye2sert complete the GitHub for Atlassian connection | Open |
+
+## Sprint 2 outcome
+
+- All 17 items completed (57 points including the shared T16).
+- Checkout and payment were run end to end in Camunda; evidence is in `camunda/evidence/`.
+- Review feedback: only one actor is expanded in the SR model. Expanding Customer and Producer is added to the Sprint 3 backlog (Hamza).
+- Carried into Sprint 3: linking checkout and payment, declined payment and retry form, a single shared stock file.
+- Jira screenshots: `project-management/sprint-2-screenshots/`.
 
    *AI was used in an assistive role throughout this document. It was reviewed by our team and changes were made.*
