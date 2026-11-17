@@ -1,7 +1,7 @@
 # Sprint 2 Plan – Socio-Technical and Operational Modelling with Initial Automation
  
 **Sprint dates:** 29 October 2026 – 19 November 2026
-**Review:** Thursday 19 November 2026 [format and submission time to be confirmed when announced]
+**Review:** Monday 16th November 2026 [In Class]
  
 ## Sprint goal
 Complete the i* SD and SR models, build detailed operational BPMN models for checkout and payment (including their exception paths) that trace back to the strategic BPMN and i* models, and get the main path of both processes running in Camunda with Forms and an initial simulated payment service.
