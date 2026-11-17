@@ -4,7 +4,7 @@ UFCFTR-30-3 Distributed and Enterprise Software Development – Task 1
 Bristol Regional Food Network – Digital Marketplace
 
 **Project board (Jira):** https://live-team-oq9nzy44.atlassian.net/jira/software/projects/SCRUM/boards/1
-**Current sprint:** Sprint 2 – i* models, operational BPMN and initial Camunda automation (30 Oct – 19 Nov 2026)
+**Current sprint:** Sprint 2 – i* models, operational BPMN and initial Camunda automation (29 Oct – 19 Nov 2026)
 
 *Jira access is by invitation. Viewer access has been granted to the module team (Kun Wei, Khoa Phung and Dilshan Jayatilake).*
 
