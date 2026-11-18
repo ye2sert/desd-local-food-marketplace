@@ -40,7 +40,7 @@ A customer buys products from one or more local producers in a single order. The
 | `camunda/stock-service/` | Stock check service worker (`check-stock`) |
 | `camunda/shared/` | Data shared by the workers: stock levels (`stock.json`, read by the stock service) and producer delivery methods. Payment's stock update still uses its own copy until this is unified in Sprint 3 |
 | `camunda/evidence/` | Screenshots and data showing the processes running, one folder per owner |
-| `docs/` | Stakeholder, business process and functionality scope documents |
+| `docs/` | Stakeholder, business process, traceability, and functionality scope documents |
 | `project-management/` | Sprint plans and Jira screenshots |
 
 ## Running locally
@@ -99,5 +99,6 @@ The stock service does not have unit tests yet.
 - [Sprint 2 plan](project-management/sprint-2-plan.md)
 - [Product backlog (Jira)](https://live-team-oq9nzy44.atlassian.net/jira/software/projects/SCRUM/boards/1/backlog)
 - [Camunda evidence](camunda/evidence/)
+- [Traceability check (T14)](docs/T14-Traceability-check.md)
 
 *AI was used in an assistive role throughout this document. It was reviewed by our team and changes were made.*
