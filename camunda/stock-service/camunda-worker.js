@@ -1,3 +1,4 @@
+// AI was used in an assistive role in writing this code; it was reviewed and tested by me.
 
 const { Camunda8 } = require('@camunda8/sdk');
 const { checkStock } = require('./worker.js');
