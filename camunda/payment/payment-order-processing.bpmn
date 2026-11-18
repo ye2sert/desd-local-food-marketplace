@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:modeler="http://camunda.org/schema/modeler/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_PaymentOrderProcessing" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.52.0" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.10.0">
   <bpmn:collaboration id="Collaboration_PaymentOrderProcessing">
-    <bpmn:participant id="Participant_PaymentService" name="Payment Service (simulated)" />
+    <bpmn:participant id="Participant_PaymentService" name="Payment gateway (sandbox)" />
     <bpmn:participant id="Participant_Marketplace" name="Marketplace – Payment &amp; Order Processing" processRef="PaymentOrderProcessing" />
     <bpmn:participant id="Participant_Producer" name="Producer" />
     <bpmn:messageFlow id="MessageFlow_PaymentRequest" name="Payment request" sourceRef="Task_RequestPayment" targetRef="Participant_PaymentService" />
@@ -57,7 +57,7 @@
         <bpmn:targetRef>DataStore_Orders</bpmn:targetRef>
       </bpmn:dataOutputAssociation>
     </bpmn:serviceTask>
-    <bpmn:dataStoreReference id="DataStore_Orders" name="Orders" />
+    <bpmn:dataStoreReference id="DataStore_Orders" name="Order records" />
     <bpmn:serviceTask id="Task_SplitOrder" name="Split order by producer">
       <bpmn:extensionElements>
         <zeebe:taskDefinition type="split-order-by-producer" />
@@ -165,21 +165,21 @@
         <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT10S</bpmn:timeDuration>
       </bpmn:timerEventDefinition>
     </bpmn:intermediateCatchEvent>
-    <bpmn:serviceTask id="Task_FlagForAdmin" name="Flag payment for administrator">
+    <bpmn:serviceTask id="Task_FlagForAdmin" name="Flag for administrator to check payment status">
       <bpmn:extensionElements>
         <zeebe:taskDefinition type="flag-payment-for-admin" />
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_NoRetriesLeft</bpmn:incoming>
       <bpmn:outgoing>Flow_FlagToNotifyFailure</bpmn:outgoing>
     </bpmn:serviceTask>
-    <bpmn:serviceTask id="Task_NotifyCustomerFailure" name="Notify customer payment could not be processed">
+    <bpmn:serviceTask id="Task_NotifyCustomerFailure" name="Tell customer payment is pending">
       <bpmn:extensionElements>
-        <zeebe:taskDefinition type="notify-customer-payment-failure" />
+        <zeebe:taskDefinition type="notify-customer-payment-pending" />
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_FlagToNotifyFailure</bpmn:incoming>
       <bpmn:outgoing>Flow_NotifyFailureToEnd</bpmn:outgoing>
     </bpmn:serviceTask>
-    <bpmn:endEvent id="End_PaymentFailedFlagged" name="Payment failed – flagged">
+    <bpmn:endEvent id="End_PaymentFailedFlagged" name="Order held until payment is confirmed">
       <bpmn:incoming>Flow_NotifyFailureToEnd</bpmn:incoming>
     </bpmn:endEvent>
     <bpmn:serviceTask id="Task_SendConfirmation" name="Send order confirmation to customer">
@@ -205,7 +205,7 @@
           <bpmn:targetRef>DataStore_Products</bpmn:targetRef>
         </bpmn:dataOutputAssociation>
       </bpmn:serviceTask>
-      <bpmn:dataStoreReference id="DataStore_Products" name="Products" />
+      <bpmn:dataStoreReference id="DataStore_Products" name="Stock levels" />
       <bpmn:serviceTask id="Task_CalculateCommission" name="Calculate producer amounts and 5% commission">
         <bpmn:extensionElements>
           <zeebe:taskDefinition type="calculate-commission" />
@@ -273,6 +273,9 @@
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Group_CalledByCheckout_di" bpmnElement="Group_CalledByCheckout">
         <dc:Bounds x="132" y="384" width="88" height="110" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="126" y="500" width="160" height="40" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Start_OrderReadyForPayment_di" bpmnElement="Start_OrderReadyForPayment">
         <dc:Bounds x="157" y="422" width="36" height="36" />
@@ -374,8 +377,8 @@
       <bpmndi:BPMNEdge id="Flow_FlagToNotifyFailure_di" bpmnElement="Flow_FlagToNotifyFailure"><di:waypoint x="1360" y="690" /><di:waypoint x="1400" y="690" /></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_NotifyFailureToEnd_di" bpmnElement="Flow_NotifyFailureToEnd"><di:waypoint x="1460" y="730" /><di:waypoint x="1460" y="762" /></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="DataAssoc_CreateOrderToOrders_di" bpmnElement="DataAssoc_CreateOrderToOrders"><di:waypoint x="330" y="480" /><di:waypoint x="330" y="600" /></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="MessageFlow_PaymentRequest_di" bpmnElement="MessageFlow_PaymentRequest"><di:waypoint x="890" y="400" /><di:waypoint x="890" y="90" /></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="MessageFlow_PaymentResponse_di" bpmnElement="MessageFlow_PaymentResponse"><di:waypoint x="930" y="90" /><di:waypoint x="930" y="400" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MessageFlow_PaymentRequest_di" bpmnElement="MessageFlow_PaymentRequest"><di:waypoint x="890" y="400" /><di:waypoint x="890" y="90" /><bpmndi:BPMNLabel><dc:Bounds x="800" y="300" width="84" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MessageFlow_PaymentResponse_di" bpmnElement="MessageFlow_PaymentResponse"><di:waypoint x="930" y="90" /><di:waypoint x="930" y="400" /><bpmndi:BPMNLabel><dc:Bounds x="936" y="300" width="76" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="MessageFlow_ProducerNotification_di" bpmnElement="MessageFlow_ProducerNotification"><di:waypoint x="1590" y="480" /><di:waypoint x="1590" y="870" /></bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
