@@ -11,11 +11,11 @@ This folder contains the Node.js job workers that complete the service tasks in 
 | `create-order` | – | Creates the marketplace order | `orderId` ("ORD-&lt;timestamp&gt;"), `orderStatus` ("CREATED") |
 | `split-order-by-producer` | US9 | Splits the order so each producer only gets their own items; adds an id to each part | `producerOrders` with `producerOrderId` ("&lt;orderId&gt;-&lt;producerId&gt;") |
 | `send-order-confirmation` | – | Logs the confirmation to the customer | `confirmationSent: true` |
-| `update-stock` | US9 | Reduces the simulated stock after payment succeeds. Products at 0 become unavailable. Fails the job (incident in Operate) rather than letting stock go negative | `stockUpdates: [{productId, newQuantity, available}]` |
+| `update-stock` | US9 | Reduces stock in the shared file `camunda/shared/stock.json` after payment succeeds, so the checkout stock check sees the new levels. Products at 0 become unavailable. Fails the job (incident in Operate) rather than letting stock go negative | `stockUpdates: [{productId, newQuantity, available}]` |
 | `calculate-commission` | US10 | Per producer: gross = subtotal, commission = 5% rounded to 2 dp, net = gross − commission. Checks that net amounts plus commission equal the order total to the penny | `producerAmounts`, `marketplaceCommission` |
 | `notify-producer` | US9 | Multi-instance (one per `producerOrder`). Logs a message with only that producer's items and a required-by date at least 48 hours ahead | nothing |
-| `flag-payment-for-admin` | – | Logs that the payment was flagged (full behaviour in Sprint 3) | nothing |
-| `notify-customer-payment-failure` | – | Logs that the customer was told the payment failed (full behaviour in Sprint 3) | nothing |
+| `flag-payment-for-admin` | – | No reply from the payment gateway after 3 tries: the order is held and an administrator checks the payment status (logged; full behaviour in Sprint 3) | `orderStatus: "PAYMENT_PENDING"` |
+| `notify-customer-payment-pending` | – | Tells the customer their payment is pending (logged; full behaviour in Sprint 3) | nothing |
 
 `request-payment` is handled by the simulated payment service (`camunda/payment-service/`, owned by Rohan).
 
@@ -30,7 +30,9 @@ basketId, customerId: strings
 
 All money is rounded to 2 dp. Internally it is handled in whole pence so totals always add up exactly.
 
-Simulated stock is seeded from `stock.json` (PRD-101: 20, PRD-102: 30, PRD-201: 15, PRD-202: 25, PRD-301: 10) and reset each time the worker starts.
+Stock levels are shared with checkout in `camunda/shared/stock.json` (the same file the stock check in `camunda/stock-service` reads). `update-stock` reads it, reduces it and saves it back, so the next checkout sees the lower stock. Test runs change this file: run `git restore camunda/shared/stock.json` before committing so the starting levels (PRD-101: 20, PRD-102: 30, PRD-201: 15, PRD-202: 25, PRD-301: 10) stay the same for everyone.
+
+When the payment gateway does not reply, the process never assumes the payment failed (same rule as the strategic BPMN): after 3 tries the order is held, an administrator checks the payment status, and the customer is told the payment is pending.
 
 ## How to run
 
