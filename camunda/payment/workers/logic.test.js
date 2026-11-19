@@ -102,3 +102,23 @@ test('notify: only that producer’s items and requiredBy at least 48h ahead', (
   assert.ok(Date.parse(msg.requiredBy) - now >= 48 * 60 * 60 * 1000);
   assert.equal(msg.requiredBy, new Date(msg.requiredBy).toISOString());
 });
+
+// Shared stock file (camunda/shared/stock.json), tested on a temporary copy.
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+const stockStore = require('./stockStore');
+
+test('stock store: points at camunda/shared/stock.json by default', () => {
+  assert.equal(path.relative(path.join(__dirname, '..', '..'), stockStore.STOCK_FILE), path.join('shared', 'stock.json'));
+});
+
+test('stock store: reduced stock is saved, so the next read (e.g. the checkout stock check) sees it', () => {
+  const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'stock-')), 'stock.json');
+  stockStore.save(seedStock, file);
+  const { stock } = logic.reduceStock(stockStore.load(file), [{ productId: 'PRD-301', quantity: 10 }]);
+  stockStore.save(stock, file);
+  assert.equal(stockStore.load(file)['PRD-301'], 0);
+  assert.deepEqual(Object.keys(stockStore.load(file)), Object.keys(seedStock));
+  assert.ok(!fs.existsSync(`${file}.tmp`));
+});

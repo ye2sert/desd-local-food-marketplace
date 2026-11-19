@@ -3,19 +3,15 @@
 
 const { Camunda8 } = require('@camunda8/sdk');
 const logic = require('./logic');
-const seedStock = require('./stock.json');
+const stockStore = require('./stockStore');
 
 // Same connection settings as camunda/payment-service/worker.js (local c8run).
 const camunda = new Camunda8({
   ZEEBE_GRPC_ADDRESS: 'grpc://localhost:26500',
   CAMUNDA_AUTH_STRATEGY: 'NONE',
-  CAMUNDA_SECURE_CONNECTION: false,
 });
 
 const zeebe = camunda.getZeebeGrpcApiClient();
-
-// Simulated stock, kept in memory and reset each time the worker starts.
-let stock = { ...seedStock };
 
 zeebe.createWorker({
   taskType: 'create-order',
@@ -45,12 +41,13 @@ zeebe.createWorker({
 });
 
 // US9: stock is only reduced here, after payment has succeeded.
+// Uses the shared stock file, so the checkout stock check sees the new levels.
 zeebe.createWorker({
   taskType: 'update-stock',
   taskHandler: (job) => {
     try {
-      const result = logic.reduceStock(stock, job.variables.items);
-      stock = result.stock;
+      const result = logic.reduceStock(stockStore.load(), job.variables.items);
+      stockStore.save(result.stock);
       console.log(`[update-stock] ${job.variables.orderId}:`, result.stockUpdates);
       return job.complete({ stockUpdates: result.stockUpdates });
     } catch (err) {
@@ -85,19 +82,22 @@ zeebe.createWorker({
   },
 });
 
+// No reply from the payment gateway after the retries. We don't know whether the
+// payment went through, so we never treat it as failed: the order is held, an
+// administrator checks the payment status, and the customer is told it is pending.
 // Sprint 3 will add the full behaviour for these two.
 zeebe.createWorker({
   taskType: 'flag-payment-for-admin',
   taskHandler: (job) => {
-    console.log(`[flag-payment-for-admin] Order ${job.variables.orderId} flagged: payment service unavailable after retries`);
-    return job.complete();
+    console.log(`[flag-payment-for-admin] Order ${job.variables.orderId} held: no reply from the payment gateway after retries – administrator to check payment status`);
+    return job.complete({ orderStatus: 'PAYMENT_PENDING' });
   },
 });
 
 zeebe.createWorker({
-  taskType: 'notify-customer-payment-failure',
+  taskType: 'notify-customer-payment-pending',
   taskHandler: (job) => {
-    console.log(`[notify-customer-payment-failure] Customer ${job.variables.customerId} told payment for ${job.variables.orderId} failed`);
+    console.log(`[notify-customer-payment-pending] Customer ${job.variables.customerId} told payment for ${job.variables.orderId} is pending`);
     return job.complete();
   },
 });
