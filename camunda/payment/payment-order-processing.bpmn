@@ -253,6 +253,10 @@
     <bpmn:sequenceFlow id="Flow_ConfirmationToSubProcess" sourceRef="Task_SendConfirmation" targetRef="SubProcess_ProcessConfirmedOrder" />
     <bpmn:sequenceFlow id="Flow_SubProcessToNotify" sourceRef="SubProcess_ProcessConfirmedOrder" targetRef="Task_NotifyProducers" />
     <bpmn:sequenceFlow id="Flow_NotifyToEnd" sourceRef="Task_NotifyProducers" targetRef="End_ProducersNotified" />
+    <bpmn:textAnnotation id="TextAnnotation_LeadTime">
+      <bpmn:text>Producers get at least 48 hours' notice (LEAD_TIME_HOURS in logic.js)</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Association_LeadTime" associationDirection="None" sourceRef="Task_NotifyProducers" targetRef="TextAnnotation_LeadTime" />
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_Main">
     <bpmndi:BPMNPlane id="BPMNPlane_Main" bpmnElement="Collaboration_PaymentOrderProcessing">
@@ -319,6 +323,10 @@
       <bpmndi:BPMNShape id="SubProcess_ProcessConfirmedOrder_di" bpmnElement="SubProcess_ProcessConfirmedOrder" isExpanded="false">
         <dc:Bounds x="1330" y="400" width="120" height="80" />
       </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="TextAnnotation_LeadTime_di" bpmnElement="TextAnnotation_LeadTime">
+        <dc:Bounds x="1650" y="510" width="230" height="44" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Association_LeadTime_di" bpmnElement="Association_LeadTime"><di:waypoint x="1615" y="480" /><di:waypoint x="1650" y="525" /></bpmndi:BPMNEdge>
       <bpmndi:BPMNShape id="Task_NotifyProducers_di" bpmnElement="Task_NotifyProducers">
         <dc:Bounds x="1510" y="400" width="120" height="80" />
       </bpmndi:BPMNShape>
