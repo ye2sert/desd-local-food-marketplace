@@ -38,7 +38,7 @@ A customer buys products from one or more local producers in a single order. The
 | `camunda/payment/` | Payment & Order Processing process, payment form and workers |
 | `camunda/payment-service/` | Simulated payment service worker (`request-payment`) |
 | `camunda/stock-service/` | Stock check service worker (`check-stock`) |
-| `camunda/shared/` | Data shared by the workers: stock levels (`stock.json`, read by the stock service) and producer delivery methods. Payment's stock update still uses its own copy until this is unified in Sprint 3 |
+| `camunda/shared/` | Data shared by the workers: stock levels (`stock.json`, read by the stock check and updated by payment's `update-stock`) and producer delivery methods. Running the flow changes `stock.json`, so run `git restore camunda/shared/stock.json` before committing |
 | `camunda/evidence/` | Screenshots and data showing the processes running, one folder per owner |
 | `docs/` | Stakeholder, business process, traceability, and functionality scope documents |
 | `project-management/` | Sprint plans and Jira screenshots |

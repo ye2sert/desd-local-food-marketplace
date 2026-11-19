@@ -152,7 +152,7 @@
       <bpmn:errorEventDefinition id="ErrorEventDefinition_0lagwci" errorRef="Error_17lootx" />
     </bpmn:boundaryEvent>
     <bpmn:sequenceFlow id="Flow_0u7bmdw" sourceRef="Event_03qj9y1" targetRef="Activity_0ahnw7g" />
-    <bpmn:dataStoreReference id="DataStoreReference_1fzlofz" name="Products" />
+    <bpmn:dataStoreReference id="DataStoreReference_1fzlofz" name="Stock levels" />
     <bpmn:serviceTask id="Activity_0ahnw7g" name="Ask customer to try later">
       <bpmn:extensionElements>
         <zeebe:taskDefinition type="notify-checkout-failed" />
