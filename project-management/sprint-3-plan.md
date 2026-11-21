@@ -1,6 +1,6 @@
 # Sprint 3 Plan – Final Implementation, Integration and In-Class Demonstration
 
-**Sprint dates:** 23 November 2026 – 10 December 2026
+**Sprint dates:** 19 November 2026 – 10 December 2026
 **Final demonstration:** in class [date to be confirmed]
 **Repository deadline:** before 14:00 on Thursday 10 December 2026 (no 48-hour late window)
 
@@ -54,7 +54,7 @@ Sprint 3 is 50% of the Task 1 group mark.
 | US12 | Weekly producer settlement with audit trail | Tahmid | Could | 5 |
 | US7 | Payment declined: customer is told and can retry or cancel | Mackenzie | Must | 3 |
 | US8 | Payment service unavailable: retry, then flag for admin and tell the customer | Mackenzie | Should | 5 |
-| T19 | Single shared stock file: `update-stock` reads and writes `camunda/shared/stock.json`, with a reset copy | Mackenzie | Should | 3 |
+| T19 | Single shared stock file: `update-stock` reads and writes `camunda/shared/stock.json`; reset with `git restore` before committing or demoing | Mackenzie | Should | 3 |
 | PW9 | End-to-end testing of both processes, including every exception path | Mackenzie | Must | 3 |
 | T24 | Simulated payment service returns DECLINED and simulates being unavailable | Rohan | Must | 3 |
 | PW6c | Camunda Form – payment declined (retry or cancel) | Rohan | Must | 2 |
@@ -115,9 +115,9 @@ Planned points are only a guide. The signed Contribution Matrix (PW8) will refle
 
 | Dates | Activity |
 |---|---|
-| 23 – 29 Nov | Sprint planning and decisions; T24 and T23 first; T18 call activity; start US3, US7, US8 and the forms; start T20 and T22 |
-| 30 Nov – 6 Dec | Exception paths and forms working; T19 single stock file; PW7 evaluation; T21 traceability re-check; T25 Task 2 note |
-| 7 – 10 Dec | PW9 end-to-end testing and evidence; rehearse the final demonstration; agree and sign the Contribution Matrix; final README and repository check before 14:00 on 10 Dec |
+| Week 1 (19 – 29 Nov) | Sprint planning and decisions; T24 and T23 first; T18 call activity; start US3, US7, US8 and the forms; start T20 and T22 |
+| Week 2 (30 Nov – 6 Dec) | Exception paths and forms working; T19 single stock file; PW7 evaluation; T21 traceability re-check; T25 Task 2 note |
+| Week 3 (7 – 10 Dec) | PW9 end-to-end testing and evidence; rehearse the final demonstration; agree and sign the Contribution Matrix; final README and repository check before 14:00 on 10 Dec |
 
 ## Definition of done
 - Work is committed to the repository by the person who did it, or labelled as co-authored.
@@ -131,8 +131,8 @@ Planned points are only a guide. The signed Contribution Matrix (PW8) will refle
 | Risk | Action | Status |
 |---|---|---|
 | Linking the two processes breaks the working flow before the demo | Do T18 in week 1 on its own branch; keep the Sprint 2 manual flow as a fallback | Open |
-| i* and BPMN models must be the group's own work (AI-generated models are not allowed) | Models drawn by their owners in piStar and the Camunda Modeler, with source files committed | Open |
-| Two workers writing the shared stock file use up stock during rehearsals | Keep a reset copy of the starting stock and reset it before the demo | Open |
+| i* and BPMN models must be the group's own work (AI-generated models are not allowed) | Models drawn by their owners in piStar and the Camunda Modeler, with source files committed | Open 
+| Two workers writing the shared stock file use up stock during rehearsals | Reset `camunda/shared/stock.json` with `git restore` before the demo | Open |
 | Contribution is uneven and lowers individual marks | Track work honestly in Jira; review points at each stand-up | Open |
 | Repository not final by 14:00 on 10 Dec (no late window) | Finish features by 7 Dec; only fixes and evidence after that | Open |
 | GitHub not yet linked to Jira | Rohan and ye2sert complete the GitHub for Atlassian connection | Open |
